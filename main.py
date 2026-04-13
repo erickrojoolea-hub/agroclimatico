@@ -753,8 +753,25 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             render_metric("Clientes Electricos",
                           f"{elec.get('total_clientes', 0):,}" if elec.get('disponible') else "N/D", "")
         with mc5:
-            # Semaforo hidrico
-            if agua.get('disponible') and agua.get('monto_total') and agua['monto_total'] > 0:
+            # Semaforo hidrico -- prefer analisis_sitio (point-specific)
+            sitio_data = pr.get('analisis_sitio')
+            if sitio_data and sitio_data.get('disponible'):
+                sitio_sem = sitio_data.get('semaforo', 'verde')
+                sem_colors = {'rojo': '#C62828', 'amarillo': '#F9A825', 'verde': '#2E7D32'}
+                sem_labels = {'rojo': 'Critico', 'amarillo': 'Precaucion', 'verde': 'Favorable'}
+                sem_color = sem_colors.get(sitio_sem, '#2E7D32')
+                sem_label = sem_labels.get(sitio_sem, 'N/D')
+                cuenca_txt = ""
+                if sitio_data.get('cuenca'):
+                    cuenca_txt = sitio_data['cuenca'].get('nombre', '')
+                st.markdown(f"""
+                <div class="metric-card" style="border-left-color: {sem_color};">
+                    <h3>Situacion Hidrica</h3>
+                    <span class="value" style="color: {sem_color};">{sem_label}</span>
+                    <span class="unit">{cuenca_txt}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            elif agua.get('disponible') and agua.get('monto_total') and agua['monto_total'] > 0:
                 ratio = agua['saldo_total'] / agua['monto_total']
                 if ratio < 0.3:
                     sem_color, sem_label = '#2E7D32', 'Favorable'
@@ -772,9 +789,9 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             else:
                 render_metric("Situacion Hidrica", "N/D", "")
 
-        # -- Tabs predial (8 tabs) ----------------------------------------
+        # -- Tabs predial (9 tabs) ----------------------------------------
         predial_tabs = st.tabs([
-            "Resumen", "Produccion", "Agua", "Uso de Suelo",
+            "Resumen", "Analisis Sitio", "Produccion", "Agua", "Uso de Suelo",
             "Electrico", "Riesgos", "Vecinos", "Descargas"
         ])
 
@@ -789,6 +806,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             # Semaforo grid -- show each section's status
             section_semaforos = []
             for sec_name, sec_label in [
+                ('analisis_sitio', 'Analisis del Sitio'),
                 ('produccion', 'Produccion Agricola'),
                 ('agua', 'Derechos de Agua'),
                 ('electrico', 'Infraestructura Electrica'),
@@ -796,7 +814,9 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 ('riesgos', 'Riesgos'),
             ]:
                 sec = pr.get(sec_name, {})
-                sem = sec.get('semaforo', 'amarillo')
+                if not sec:
+                    continue
+                sem = sec.get('semaforo', sec.get('semaforo_global', 'amarillo'))
                 txt = sec.get('texto_analitico', '')
                 # Show first sentence only for overview
                 txt_short = txt.split('.')[0] + '.' if txt else 'Sin informacion disponible.'
@@ -808,8 +828,101 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 st.markdown("##### Vision General")
                 st.markdown(prod['texto_analitico'])
 
-        # -- Tab: Produccion Agricola -------------------------------------
+        # -- Tab: Analisis del Sitio (NEW - point-specific) ----------------
         with predial_tabs[1]:
+            st.markdown("#### Analisis Geoespacial del Sitio")
+            sitio = pr.get('analisis_sitio')
+            if sitio and sitio.get('disponible'):
+                # Semaforo hidrico
+                render_semaforo("Riesgo Hidrico", sitio['semaforo'], sitio['semaforo_texto'])
+
+                # Texto analitico
+                if sitio.get('texto_analitico'):
+                    st.markdown(sitio['texto_analitico'])
+
+                render_alertas(sitio.get('alertas'))
+
+                st.markdown("---")
+
+                # Cuenca info
+                col_c1, col_c2, col_c3 = st.columns(3)
+                cuenca = sitio.get('cuenca')
+                subcuenca = sitio.get('subcuenca')
+                subsubcuenca = sitio.get('subsubcuenca')
+                with col_c1:
+                    render_metric("Cuenca",
+                                  cuenca['nombre'] if cuenca else "N/D",
+                                  f"Codigo: {cuenca['codigo']}" if cuenca else "")
+                with col_c2:
+                    render_metric("Subcuenca",
+                                  subcuenca['nombre'] if subcuenca else "N/D",
+                                  f"Codigo: {subcuenca['codigo']}" if subcuenca else "")
+                with col_c3:
+                    render_metric("Sub-subcuenca",
+                                  subsubcuenca['nombre'] if subsubcuenca else "N/D",
+                                  "")
+
+                # Restriccion / Agotamiento
+                restriccion = sitio.get('restriccion_hidrica')
+                agotamiento = sitio.get('agotamiento')
+                if restriccion or agotamiento:
+                    st.markdown("##### Restricciones Hidricas")
+                    if restriccion:
+                        st.error(
+                            f"**{restriccion.get('tipo', 'Restriccion')}** -- "
+                            f"Acuifero: {restriccion.get('acuifero', 'N/D')} | "
+                            f"Resolucion DGA: {restriccion.get('resolucion', 'N/D')} "
+                            f"({restriccion.get('fecha', '')})"
+                        )
+                    if agotamiento:
+                        st.error(
+                            f"**Agotamiento Declarado** -- "
+                            f"{agotamiento.get('nombre', 'N/D')} | "
+                            f"Area: {agotamiento.get('area_km2', 'N/D')} km2"
+                        )
+
+                # Isoyeta / Precipitacion
+                iso = sitio.get('isoyeta')
+                prod_pozos = sitio.get('productividad_pozos')
+                col_i1, col_i2 = st.columns(2)
+                with col_i1:
+                    if iso:
+                        render_metric("Precipitacion Anual (isoyeta)",
+                                      f"{iso['precipitacion_mm']} mm",
+                                      f"Distancia a isoyeta: {iso['distancia_km']} km")
+                    else:
+                        render_metric("Precipitacion Anual", "N/D", "")
+                with col_i2:
+                    if prod_pozos:
+                        render_metric("Productividad Pozos",
+                                      prod_pozos['productividad'],
+                                      prod_pozos['tipo'])
+                    else:
+                        render_metric("Productividad Pozos", "N/D",
+                                      "Sin datos para esta zona")
+
+                # Pozos cercanos table
+                pozos = sitio.get('pozos_cercanos', [])
+                if pozos:
+                    st.markdown("##### Pozos Cercanos")
+                    pozos_data = []
+                    for p in pozos:
+                        pozos_data.append({
+                            "Distancia (km)": p['distancia_km'],
+                            "Tipo": p['tipo'],
+                            "Profundidad (m)": p.get('profundidad_m', 'N/D'),
+                            "Nivel Estatico (m)": p.get('nivel_estatico_m', 'N/D'),
+                            "Productividad (L/s)": p.get('productividad_ls', 'N/D'),
+                        })
+                    st.dataframe(pd.DataFrame(pozos_data),
+                                 use_container_width=True, hide_index=True)
+
+                render_source("Fuente: DGA -- Cuencas BNA, Restricciones, Isoyetas, Mapa Hidrogeologico")
+            else:
+                st.info("Analisis geoespacial no disponible. Se requieren coordenadas validas.")
+
+        # -- Tab: Produccion Agricola -------------------------------------
+        with predial_tabs[2]:
             st.markdown("#### Produccion Agricola -- Catastro Fruticola")
 
             # Analytical text at top
@@ -918,7 +1031,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             render_source("Fuente: Catastro Fruticola CIREN-ODEPA")
 
         # -- Tab: Agua ----------------------------------------------------
-        with predial_tabs[2]:
+        with predial_tabs[3]:
             st.markdown("#### Derechos de Agua -- DGA")
 
             # Analytical text
@@ -1014,7 +1127,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             render_source("Fuente: Direccion General de Aguas (DGA), Registro de Patentes")
 
         # -- Tab: Uso de Suelo (NEW) --------------------------------------
-        with predial_tabs[3]:
+        with predial_tabs[4]:
             st.markdown("#### Uso de Suelo")
             if uso_suelo and uso_suelo.get('disponible', uso_suelo.get('distribucion')):
                 if uso_suelo.get('texto_analitico'):
@@ -1033,7 +1146,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 st.info("No hay datos de uso de suelo disponibles para esta comuna.")
 
         # -- Tab: Electrico -----------------------------------------------
-        with predial_tabs[4]:
+        with predial_tabs[5]:
             st.markdown("#### Infraestructura Electrica")
 
             if elec.get('texto_analitico'):
@@ -1079,7 +1192,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
             render_source("Fuente: SEC, CNE - Clientes regulados")
 
         # -- Tab: Riesgos (NEW) -------------------------------------------
-        with predial_tabs[5]:
+        with predial_tabs[6]:
             st.markdown("#### Evaluacion de Riesgos")
             if riesgos and (riesgos.get('items') or riesgos.get('disponible')):
                 if riesgos.get('texto_analitico'):
@@ -1104,7 +1217,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 st.info("No hay datos de evaluacion de riesgos disponibles para esta comuna.")
 
         # -- Tab: Vecinos (NEW) -------------------------------------------
-        with predial_tabs[6]:
+        with predial_tabs[7]:
             st.markdown("#### Produccion Vecina")
             if vecinos and (vecinos.get('comunas') or vecinos.get('disponible')):
                 if vecinos.get('texto_analitico'):
@@ -1149,7 +1262,7 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 st.info("No hay datos de produccion vecina disponibles.")
 
         # -- Tab: Descargas -----------------------------------------------
-        with predial_tabs[7]:
+        with predial_tabs[8]:
             st.markdown("#### Descargar Informe Predial")
             col_dl1, col_dl2 = st.columns(2)
 

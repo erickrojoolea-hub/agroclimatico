@@ -17,6 +17,20 @@ import logging
 import unicodedata
 from typing import Optional
 
+try:
+    from geo_engine import (
+        analisis_sitio as _geo_analisis_sitio,
+        get_restriccion_hidrica as _geo_restriccion,
+        get_agotamiento as _geo_agotamiento,
+        get_reserva_caudales as _geo_reserva,
+        get_embalses_cercanos as _geo_embalses,
+        get_estaciones_cercanas as _geo_estaciones,
+        get_cuenca as _geo_cuenca,
+    )
+    _HAS_GEO_ENGINE = True
+except ImportError:
+    _HAS_GEO_ENGINE = False
+
 logger = logging.getLogger(__name__)
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
@@ -620,15 +634,64 @@ def _get_agua(comuna: str, lat: float = None, lon: float = None) -> dict:
 
 def _enrich_agua_geospatial(result: dict, comuna: str, lat: float = None,
                             lon: float = None):
-    """Add geospatial info to agua section (graceful if db doesn't exist)."""
+    """Add geospatial info to agua section using point-in-polygon (geo_engine)."""
+
+    # --- Use geo_engine for point-specific analysis ---
+    if _HAS_GEO_ENGINE and lat is not None and lon is not None:
+        restriccion = _geo_restriccion(lat, lon)
+        if restriccion:
+            result["restriccion_hidrica"] = True
+            result["restriccion_detalle"] = restriccion
+
+        agotamiento = _geo_agotamiento(lat, lon)
+        if agotamiento:
+            result["agotamiento"] = True
+            result["agotamiento_detalle"] = agotamiento
+
+        reserva = _geo_reserva(lat, lon)
+        if reserva:
+            result["reserva_caudal"] = True
+            result["reserva_detalle"] = reserva
+
+        # Cuenca info
+        cuenca = _geo_cuenca(lat, lon)
+        if cuenca:
+            result["cuenca"] = cuenca
+
+        # Infrastructure cercana (embalses + estaciones with proper WGS84)
+        infra = []
+        embalses = _geo_embalses(lat, lon, top_n=3)
+        for e in embalses:
+            infra.append({
+                "tipo": "Embalse",
+                "nombre": e["nombre"],
+                "distancia_km": e["distancia_km"],
+                "comuna": e.get("comuna", ""),
+                "uso": e.get("uso", ""),
+            })
+        for tipo_est, label in [
+            ("fluviometricas", "Estacion fluviometrica"),
+            ("meteorologicas", "Estacion meteorologica"),
+            ("calidad_agua", "Punto calidad agua"),
+        ]:
+            ests = _geo_estaciones(lat, lon, tipo_est, top_n=3)
+            for e in ests:
+                infra.append({
+                    "tipo": label,
+                    "nombre": e["nombre"],
+                    "distancia_km": e["distancia_km"],
+                })
+        infra.sort(key=lambda x: x["distancia_km"])
+        result["infraestructura_cercana"] = infra
+        return
+
+    # --- Fallback: region-based lookup from SQLite ---
     conn = _connect("geospatial")
     if not conn:
         return
 
     try:
-        # Get region from result or try to find it
         region = ""
-        # Try to get region from DGA data
         dga_conn = _connect("dga")
         if dga_conn:
             row = _search_comuna_single(
@@ -638,7 +701,6 @@ def _enrich_agua_geospatial(result: dict, comuna: str, lat: float = None,
                 region = row["region"] or ""
             dga_conn.close()
 
-        # Restricciones hidricas
         if region and _table_exists(conn, "restricciones_hidricas"):
             norm_region = normalize_comuna(region).upper()
             rows = conn.execute(
@@ -647,67 +709,6 @@ def _enrich_agua_geospatial(result: dict, comuna: str, lat: float = None,
             ).fetchall()
             if rows:
                 result["restriccion_hidrica"] = True
-
-        # Agotamiento
-        if region and _table_exists(conn, "agotamiento"):
-            norm_region = normalize_comuna(region).upper()
-            rows = conn.execute(
-                "SELECT * FROM agotamiento WHERE UPPER(region) LIKE ?",
-                (f"%{norm_region}%",)
-            ).fetchall()
-            if rows:
-                result["agotamiento"] = True
-
-        # Reserva de caudales
-        if region and _table_exists(conn, "reserva_caudales"):
-            norm_region = normalize_comuna(region).upper()
-            rows = conn.execute(
-                "SELECT * FROM reserva_caudales WHERE UPPER(region) LIKE ?",
-                (f"%{norm_region}%",)
-            ).fetchall()
-            if rows:
-                result["reserva_caudal"] = True
-
-        # Infrastructure distances (if lat/lon provided)
-        if lat is not None and lon is not None:
-            infra = []
-            for table, tipo, lat_col, lon_col in [
-                ("embalses", "Embalse", "lat", "lon"),
-                ("estaciones_fluviometricas", "Estacion fluviometrica", "lat", "lon"),
-                ("estaciones_meteorologicas", "Estacion meteorologica", "lat", "lon"),
-                ("calidad_agua", "Punto calidad agua", "lat", "lon"),
-            ]:
-                if not _table_exists(conn, table):
-                    continue
-                try:
-                    pts = conn.execute(
-                        f"SELECT nombre, {lat_col}, {lon_col} FROM {table} "
-                        f"WHERE {lat_col} IS NOT NULL AND {lon_col} IS NOT NULL"
-                    ).fetchall()
-                    for p in pts:
-                        d = _haversine(lat, lon, p[lat_col], p[lon_col])
-                        if d < 100:  # within 100 km
-                            infra.append({
-                                "tipo": tipo,
-                                "nombre": p["nombre"],
-                                "distancia_km": round(d, 1),
-                            })
-                except Exception:
-                    pass
-
-            infra.sort(key=lambda x: x["distancia_km"])
-            # Top 3 per type
-            by_type = {}
-            for item in infra:
-                t = item["tipo"]
-                if t not in by_type:
-                    by_type[t] = []
-                if len(by_type[t]) < 3:
-                    by_type[t].append(item)
-            result["infraestructura_cercana"] = [
-                item for items in by_type.values() for item in items
-            ]
-            result["infraestructura_cercana"].sort(key=lambda x: x["distancia_km"])
 
     except Exception as e:
         logger.warning(f"Error en geospatial agua ({comuna}): {e}")
@@ -1126,6 +1127,8 @@ def _get_infraestructura(comuna: str, lat: float = None, lon: float = None) -> d
     result = {
         "disponible": False,
         "cercanos": [],
+        "cuenca": None,
+        "subcuenca": None,
         "texto_analitico": "",
     }
     if lat is None or lon is None:
@@ -1134,10 +1137,82 @@ def _get_infraestructura(comuna: str, lat: float = None, lon: float = None) -> d
             "para calcular distancias a infraestructura cercana.")
         return result
 
+    # --- Use geo_engine for accurate point-specific queries ---
+    if _HAS_GEO_ENGINE:
+        try:
+            from geo_engine import (
+                get_cuenca, get_subcuenca, get_subsubcuenca,
+                get_embalses_cercanos, get_estaciones_cercanas,
+            )
+
+            # Cuenca info via point-in-polygon
+            cuenca = get_cuenca(lat, lon)
+            subcuenca = get_subcuenca(lat, lon)
+            subsubcuenca = get_subsubcuenca(lat, lon)
+            result["cuenca"] = cuenca
+            result["subcuenca"] = subcuenca
+            result["subsubcuenca"] = subsubcuenca
+
+            all_infra = []
+
+            # Embalses with names
+            embalses = get_embalses_cercanos(lat, lon, max_km=100, top_n=5)
+            for e in embalses:
+                all_infra.append({
+                    "tipo": "Embalse",
+                    "nombre": e["nombre"],
+                    "distancia_km": e["distancia_km"],
+                    "detalle": e.get("uso", ""),
+                })
+
+            # Estaciones with proper WGS84 coords
+            for tipo_est, label in [
+                ("fluviometricas", "Estacion fluviometrica"),
+                ("meteorologicas", "Estacion meteorologica"),
+                ("calidad_agua", "Punto calidad agua"),
+            ]:
+                ests = get_estaciones_cercanas(lat, lon, tipo_est, top_n=3)
+                for e in ests:
+                    all_infra.append({
+                        "tipo": label,
+                        "nombre": e["nombre"],
+                        "distancia_km": e["distancia_km"],
+                    })
+
+            all_infra.sort(key=lambda x: x["distancia_km"])
+            result["cercanos"] = all_infra
+
+            if all_infra:
+                result["disponible"] = True
+                mas_cercano = all_infra[0]
+
+                cuenca_text = ""
+                if cuenca:
+                    cuenca_text = f" El punto se ubica en la cuenca '{cuenca['nombre']}'"
+                    if subcuenca:
+                        cuenca_text += f", subcuenca '{subcuenca['nombre']}'"
+                    cuenca_text += "."
+
+                result["texto_analitico"] = (
+                    f"El punto de infraestructura mas cercano es '{mas_cercano['nombre']}' "
+                    f"({mas_cercano['tipo']}) a {mas_cercano['distancia_km']} km. "
+                    f"Se identificaron {len(all_infra)} puntos de infraestructura "
+                    f"en un radio de 100 km.{cuenca_text}"
+                )
+            else:
+                result["texto_analitico"] = (
+                    "No se encontraron puntos de infraestructura relevantes "
+                    "en un radio de 100 km.")
+
+            return result
+        except Exception as e:
+            logger.warning(f"Error using geo_engine for infra: {e}")
+            # Fall through to SQLite-based fallback
+
+    # --- Fallback: SQLite-based queries ---
     conn = _connect("geospatial")
     if not conn:
-        result["texto_analitico"] = (
-            "Base de datos geospatial.db no disponible.")
+        result["texto_analitico"] = "Base de datos geospatial.db no disponible."
         return result
 
     try:
@@ -1147,8 +1222,6 @@ def _get_infraestructura(comuna: str, lat: float = None, lon: float = None) -> d
             ("estaciones_fluviometricas", "Estacion fluviometrica", "lat", "lon"),
             ("estaciones_meteorologicas", "Estacion meteorologica", "lat", "lon"),
             ("calidad_agua", "Punto calidad agua", "lat", "lon"),
-            ("cuencas", "Cuenca", "lat_centroid", "lon_centroid"),
-            ("subcuencas", "Subcuenca", "lat_centroid", "lon_centroid"),
         ]
         for table, tipo, lat_col, lon_col in tables_config:
             if not _table_exists(conn, table):
@@ -1163,7 +1236,7 @@ def _get_infraestructura(comuna: str, lat: float = None, lon: float = None) -> d
                     if d < 100:
                         all_infra.append({
                             "tipo": tipo,
-                            "nombre": p["nombre"],
+                            "nombre": p["nombre"] or "Sin nombre",
                             "distancia_km": round(d, 1),
                         })
             except Exception:
@@ -1171,7 +1244,6 @@ def _get_infraestructura(comuna: str, lat: float = None, lon: float = None) -> d
 
         all_infra.sort(key=lambda x: x["distancia_km"])
 
-        # Top 3 per type
         by_type = {}
         for item in all_infra:
             t = item["tipo"]
@@ -1389,6 +1461,130 @@ def _get_recomendaciones(comuna: str, produccion: dict, agua: dict,
 
 
 # ---------------------------------------------------------------------------
+# Section 9: Analisis del Sitio (point-specific geospatial)
+# ---------------------------------------------------------------------------
+
+def _get_analisis_sitio(lat: float, lon: float) -> dict:
+    """New section: comprehensive point-specific geospatial analysis.
+    Uses geo_engine for point-in-polygon queries against DGA GeoJSON data.
+    """
+    result = {
+        "disponible": False,
+        "cuenca": None,
+        "subcuenca": None,
+        "subsubcuenca": None,
+        "restriccion_hidrica": None,
+        "agotamiento": None,
+        "productividad_pozos": None,
+        "reserva_caudales": None,
+        "pozos_cercanos": [],
+        "isoyeta": None,
+        "riesgo_hidrico": None,
+        "texto_analitico": "",
+        "alertas": [],
+        "semaforo": "verde",
+        "semaforo_texto": "Sin restricciones identificadas",
+    }
+
+    if not _HAS_GEO_ENGINE:
+        result["texto_analitico"] = (
+            "Motor geoespacial no disponible. "
+            "No se pueden realizar consultas punto-en-poligono.")
+        return result
+
+    try:
+        geo = _geo_analisis_sitio(lat, lon)
+
+        result["disponible"] = True
+        result["cuenca"] = geo.get("cuenca")
+        result["subcuenca"] = geo.get("subcuenca")
+        result["subsubcuenca"] = geo.get("subsubcuenca")
+        result["restriccion_hidrica"] = geo.get("restriccion_hidrica")
+        result["agotamiento"] = geo.get("agotamiento")
+        result["productividad_pozos"] = geo.get("productividad_pozos")
+        result["reserva_caudales"] = geo.get("reserva_caudales")
+        result["pozos_cercanos"] = geo.get("pozos_cercanos", [])
+        result["isoyeta"] = geo.get("isoyeta")
+        result["riesgo_hidrico"] = geo.get("riesgo_hidrico")
+
+        # Semaforo from riesgo_hidrico
+        riesgo = geo.get("riesgo_hidrico", {})
+        result["semaforo"] = riesgo.get("semaforo", "verde")
+        result["alertas"] = riesgo.get("alertas", [])
+
+        if result["semaforo"] == "rojo":
+            result["semaforo_texto"] = "Restriccion hidrica critica"
+        elif result["semaforo"] == "amarillo":
+            result["semaforo_texto"] = "Precaucion: limitaciones hidricas"
+        else:
+            result["semaforo_texto"] = "Sin restricciones hidricas identificadas"
+
+        # Build analytical text
+        parts = []
+
+        cuenca = result["cuenca"]
+        subcuenca = result["subcuenca"]
+        if cuenca:
+            txt = f"El punto se ubica en la cuenca '{cuenca['nombre']}'"
+            if subcuenca:
+                txt += f", subcuenca '{subcuenca['nombre']}'"
+            txt += "."
+            parts.append(txt)
+
+        iso = result["isoyeta"]
+        if iso:
+            parts.append(
+                f"La precipitacion media anual estimada es de {iso['precipitacion_mm']} mm "
+                f"(isoyeta mas cercana a {iso['distancia_km']} km)."
+            )
+
+        prod_pozos = result["productividad_pozos"]
+        if prod_pozos:
+            parts.append(
+                f"Productividad de pozos en la zona: {prod_pozos['productividad']} "
+                f"({prod_pozos['tipo']})."
+            )
+
+        pozos = result["pozos_cercanos"]
+        if pozos:
+            pozo_cercano = pozos[0]
+            parts.append(
+                f"El pozo mas cercano esta a {pozo_cercano['distancia_km']} km "
+                f"(profundidad {pozo_cercano['profundidad_m']} m, "
+                f"productividad {pozo_cercano['productividad_ls']} L/s)."
+            )
+
+        restriccion = result["restriccion_hidrica"]
+        if restriccion:
+            tipo = restriccion.get("tipo", "Restriccion")
+            acuifero = restriccion.get("acuifero", "")
+            txt = f"ALERTA: El punto se encuentra en zona de {tipo}"
+            if acuifero:
+                txt += f" (acuifero: {acuifero})"
+            txt += "."
+            parts.append(txt)
+
+        agotamiento = result["agotamiento"]
+        if agotamiento:
+            nombre = agotamiento.get("nombre", "")
+            parts.append(
+                f"ALERTA CRITICA: Zona con declaracion de agotamiento: {nombre}. "
+                "No se otorgan nuevos derechos de aprovechamiento."
+            )
+
+        result["texto_analitico"] = " ".join(parts) if parts else (
+            "No se encontro informacion geoespacial detallada para este punto."
+        )
+
+    except Exception as e:
+        logger.warning(f"Error en _get_analisis_sitio({lat}, {lon}): {e}")
+        result["texto_analitico"] = f"Error en analisis geoespacial: {e}"
+        result["alertas"].append(f"Error: {e}")
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
@@ -1419,6 +1615,11 @@ def generate_predial_report(comuna: str, lat: float = None,
                 region = row["nombre_region"] or ""
             conn.close()
 
+    # Analisis del sitio (point-specific geospatial)
+    analisis_sitio = None
+    if lat is not None and lon is not None:
+        analisis_sitio = _get_analisis_sitio(lat, lon)
+
     riesgos = _get_riesgos(comuna, agua, uso_suelo, produccion)
     infraestructura = _get_infraestructura(comuna, lat, lon)
     vecinos = _get_vecinos(comuna, provincia)
@@ -1426,6 +1627,8 @@ def generate_predial_report(comuna: str, lat: float = None,
         comuna, produccion, agua, electrico, uso_suelo, riesgos)
 
     secciones = []
+    if analisis_sitio and analisis_sitio["disponible"]:
+        secciones.append("Analisis del Sitio")
     if produccion["disponible"]:
         secciones.append("Produccion Agricola")
     if agua["disponible"]:
@@ -1454,6 +1657,7 @@ def generate_predial_report(comuna: str, lat: float = None,
             electrico["disponible"],
         ]),
         "secciones_disponibles": secciones,
+        "analisis_sitio": analisis_sitio,
         "produccion": produccion,
         "agua": agua,
         "uso_suelo": uso_suelo,
