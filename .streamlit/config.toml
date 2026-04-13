@@ -9,5 +9,8 @@ font = "sans serif"
 [server]
 headless = true
 
+[client]
+showErrorDetails = true
+
 [browser]
 gatherUsageStats = false

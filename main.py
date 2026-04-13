@@ -897,14 +897,20 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                     if prod.get('metodos_riego'):
                         st.markdown("##### Metodos de Riego")
                         riego_df = pd.DataFrame(prod['metodos_riego'])
-                        riego_df.columns = ['Metodo', 'Registros', 'Superficie (ha)']
+                        # Rename whatever columns exist
+                        col_rename = {'metodo': 'Método', 'registros': 'Registros',
+                                      'superficie_ha': 'Superficie (ha)', 'pct': '%'}
+                        riego_df = riego_df.rename(columns=col_rename)
                         st.dataframe(riego_df, use_container_width=True, hide_index=True)
 
                 with col_var:
                     if prod.get('variedades'):
                         st.markdown("##### Top Variedades")
                         var_df = pd.DataFrame(prod['variedades'][:15])
-                        var_df.columns = ['Especie', 'Variedad', 'Superficie (ha)', 'Registros']
+                        col_rename_v = {'especie': 'Especie', 'variedad': 'Variedad',
+                                        'superficie_ha': 'Superficie (ha)', 'registros': 'Registros',
+                                        'num_explotaciones': 'Explotaciones'}
+                        var_df = var_df.rename(columns=col_rename_v)
                         st.dataframe(var_df, use_container_width=True, hide_index=True)
 
             render_source("Fuente: Catastro Fruticola CIREN-ODEPA")
@@ -971,8 +977,9 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                     if agua.get('por_tipo'):
                         st.markdown("##### Por Tipo de Titular")
                         tipo_df = pd.DataFrame(agua['por_tipo'])
-                        tipo_df.columns = ['Tipo', 'Cantidad', 'Saldo Total']
-                        tipo_df['Saldo Total'] = tipo_df['Saldo Total'].apply(lambda x: f"${x:,.0f}")
+                        tipo_df = tipo_df.rename(columns={'tipo': 'Tipo', 'cantidad': 'Cantidad', 'saldo': 'Saldo Total'})
+                        if 'Saldo Total' in tipo_df.columns:
+                            tipo_df['Saldo Total'] = tipo_df['Saldo Total'].apply(lambda x: f"${x:,.0f}")
                         st.dataframe(tipo_df, use_container_width=True, hide_index=True)
 
                 with col_evol:
@@ -1053,8 +1060,9 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 if elec.get('empresas'):
                     st.markdown("##### Distribuidoras Electricas")
                     emp_df = pd.DataFrame(elec['empresas'])
-                    emp_df.columns = ['Empresa', 'Clientes', 'Potencia (kW)']
-                    emp_df['Potencia (kW)'] = emp_df['Potencia (kW)'].apply(lambda x: f"{x:,.1f}")
+                    emp_df = emp_df.rename(columns={'empresa': 'Empresa', 'clientes': 'Clientes', 'potencia_kw': 'Potencia (kW)'})
+                    if 'Potencia (kW)' in emp_df.columns:
+                        emp_df['Potencia (kW)'] = emp_df['Potencia (kW)'].apply(lambda x: f"{x:,.1f}")
                     st.dataframe(emp_df, use_container_width=True, hide_index=True)
 
                 if elec.get('distribucion_potencia'):
