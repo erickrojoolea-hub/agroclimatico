@@ -486,36 +486,6 @@ with col_map:
         overlay=False,
     ).add_to(m)
 
-    # Marcadores de sitios PVsyst (349 puntos, agrupados para performance)
-    if show_meteo and COMUNAS_DB:
-        from folium.plugins import MarkerCluster
-        cluster = MarkerCluster(name='Estaciones PVsyst', options={
-            'maxClusterRadius': 40,
-            'disableClusteringAtZoom': 10,
-        })
-
-        for nombre, info in COMUNAS_DB.items():
-            alt = info.get('alt', 0) or 0
-            fuente = info.get('fuente_meteo', 'Meteonorm 8.2')
-
-            folium.CircleMarker(
-                [info['lat'], info['lon']],
-                radius=6,
-                color='#2E7D32',
-                fill=True,
-                fillColor='#4CAF50',
-                fillOpacity=0.7,
-                popup=folium.Popup(
-                    f"<b>{nombre}</b><br>"
-                    f"Alt: {alt:.0f}m<br>"
-                    f"<i>{fuente}</i>",
-                    max_width=200
-                ),
-                tooltip=nombre,
-            ).add_to(cluster)
-
-        cluster.add_to(m)
-
     # Pin del usuario
     if st.session_state.pin_lat is not None:
         folium.Marker(
@@ -553,50 +523,11 @@ with col_map:
             st.session_state.pop('predial_pdf', None)
             st.rerun()
 
-    # Indicacion de cobertura disponible
-    if show_meteo and st.session_state.comuna_match is None:
-        st.markdown(f'<div class="hint-box">'
-                    f'<b>{len(COMUNAS_DB)} estaciones meteorológicas</b> disponibles '
-                    f'en todo Chile. Haga click en el mapa o seleccione una localidad.'
-                    f'</div>',
-                    unsafe_allow_html=True)
+    # (capa de datos meteorológicos es transparente para el usuario)
 
 
 # -- Panel derecho ------------------------------------------------------------
 with col_panel:
-
-    # Selector rapido de localidad (solo comunas con PVsyst, para meteo)
-    if show_meteo:
-        opciones = ["-- Haga click en el mapa --"] + sorted(COMUNAS_DB.keys())
-        current_idx = 0
-        if st.session_state.comuna_match is not None:
-            nombre_actual = st.session_state.comuna_match[0]
-            if nombre_actual in opciones:
-                current_idx = opciones.index(nombre_actual)
-
-        seleccion = st.selectbox(
-            "Localidad con datos PVsyst:",
-            options=opciones,
-            index=current_idx,
-            key="comuna_selector",
-            label_visibility="collapsed",
-        )
-
-        if seleccion != "-- Haga click en el mapa --":
-            info_sel = COMUNAS_DB[seleccion]
-            current_match = st.session_state.get('comuna_match')
-            if current_match is None or current_match[0] != seleccion:
-                st.session_state.pin_lat = info_sel['lat']
-                st.session_state.pin_lon = info_sel['lon']
-                st.session_state.comuna_match = (seleccion, info_sel, 0.0)
-                st.session_state.predial_comuna = find_predial_comuna(
-                    info_sel['lat'], info_sel['lon'])
-                st.session_state.processed = False
-                st.session_state.predial_processed = False
-                st.session_state.pop('predial_report', None)
-                st.rerun()
-    else:
-        seleccion = "-- Haga click en el mapa --"
 
     # =========================================================================
     # SIN SELECCION: instrucciones
@@ -606,19 +537,11 @@ with col_panel:
         <div class="site-card">
             <h3>Seleccione un punto en el mapa</h3>
             <div class="detail">
-                Haga click en cualquier ubicacion de Chile para identificar
-                la comuna y generar los informes disponibles.<br><br>
-                El sistema detectara automaticamente la comuna y mostrara
-                los datos disponibles para su ubicacion.
+                Haga click en cualquier ubicación de Chile para generar
+                los informes disponibles para ese punto específico.
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-        if show_meteo:
-            st.markdown(f'<div class="hint-box"><b>{len(COMUNAS_DB)} estaciones meteorológicas</b> '
-                        f'disponibles en todo Chile (Meteonorm 8.2). '
-                        f'Active la capa "Cobertura meteorológica" para ver los radios.</div>',
-                        unsafe_allow_html=True)
 
     # =========================================================================
     # CON PIN: mostrar ubicacion + informes disponibles
@@ -741,6 +664,8 @@ with col_panel:
                             except Exception as e:
                                 st.error(f"Error procesando datos: {str(e)}")
                                 st.exception(e)
+            else:
+                st.info("Informe meteorológico no disponible para este lugar por ahora.")
 
         # -- INFORME PREDIAL (auto-generate on pin drop) --------------------
         if show_predial:
@@ -1318,7 +1243,7 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
     with tabs[0]:
         st.markdown("#### Resumen de Valores Mensuales para Algunos Parametros Climaticos")
         display_cols = ['MES', 'T.MAX', 'T.MIN', 'T.MED', 'DIAS GRADO',
-                        'DG.ACUM', 'D-calidos', 'HRS.FRIO', 'HRS.FRES',
+                        'DG.ACUM', 'D-cálidos', 'HRS.FRIO', 'HRS.FRES',
                         'R.SOLAR', 'H.RELAT', 'PRECIPIT', 'EVAP.POT',
                         'DEF.HIDR', 'EXC.HIDR', 'IND.HUMED', 'HELADAS']
         st.dataframe(
