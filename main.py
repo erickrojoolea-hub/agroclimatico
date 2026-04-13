@@ -108,19 +108,21 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return R * 2 * math.asin(math.sqrt(a))
 
 
-def find_nearest_comuna(lat, lon):
-    """Encuentra el sitio PVsyst mas cercano dentro de su radio.
-    Con 349 sitios, busca el más cercano que esté dentro de su radio válido.
+def find_nearest_comuna(lat, lon, max_km=50):
+    """Encuentra el sitio PVsyst mas cercano.
+    Siempre retorna el más cercano si está dentro de max_km.
     Retorna (nombre, info, distancia_km) o None."""
     best = None
     best_dist = float('inf')
     for nombre, info in COMUNAS_DB.items():
         d = haversine_km(lat, lon, info['lat'], info['lon'])
-        radio = info.get('radio_km', 15)
-        if d < radio and d < best_dist:
+        if d < best_dist:
             best = (nombre, info, d)
             best_dist = d
-    return best
+    # Retornar el más cercano si está dentro de max_km
+    if best and best_dist <= max_km:
+        return best
+    return None
 
 
 def reverse_geocode_comuna(lat, lon):

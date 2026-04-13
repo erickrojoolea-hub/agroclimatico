@@ -383,7 +383,7 @@ def main():
     non_chile = len(sites) - len(valid_sites) - len([v for v in sites.values() if v['lat'] is None])
     if non_chile > 0:
         print(f"  Filtered out {non_chile} non-Chile sites")
-    radii = calculate_radii(valid_sites, max_radius=15.0)
+    radii = calculate_radii(valid_sites, max_radius=20.0)
 
     # Stats
     r_values = list(radii.values())

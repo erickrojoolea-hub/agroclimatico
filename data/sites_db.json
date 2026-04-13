@@ -323,7 +323,7 @@
     "lat": -28.7597,
     "lon": -70.4858,
     "alt": 822.0,
-    "radio_km": 15.0,
+    "radio_km": 16.92,
     "csv_file": "Alto_del_Carmen.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -451,7 +451,7 @@
     "lat": -23.6509,
     "lon": -70.3975,
     "alt": 16.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Antofagasta.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2017), Sat=24%",
     "global_h_monthly": [
@@ -643,7 +643,7 @@
     "lat": -18.4783,
     "lon": -70.3125,
     "alt": 23.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Arica.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2017), Sat=61%",
     "global_h_monthly": [
@@ -1091,7 +1091,7 @@
     "lat": -41.7712,
     "lon": -73.1275,
     "alt": 33.0,
-    "radio_km": 15.0,
+    "radio_km": 18.4,
     "csv_file": "Calbuco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -1155,7 +1155,7 @@
     "lat": -27.0676,
     "lon": -70.8219,
     "alt": 31.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Caldera.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -1987,7 +1987,7 @@
     "lat": -42.9085,
     "lon": -72.72,
     "alt": 16.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Chaitén.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -2115,7 +2115,7 @@
     "lat": -26.3479,
     "lon": -70.6222,
     "alt": 29.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Chañaral.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -2755,7 +2755,7 @@
     "lat": -42.1948,
     "lon": -72.3378,
     "alt": 1055.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Cholgo.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -2883,7 +2883,7 @@
     "lat": -36.1318,
     "lon": -72.7914,
     "alt": 20.0,
-    "radio_km": 15.0,
+    "radio_km": 18.48,
     "csv_file": "Cobquecura.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2016-2021), Sat=100%",
     "global_h_monthly": [
@@ -2947,7 +2947,7 @@
     "lat": -41.4926,
     "lon": -72.3078,
     "alt": 37.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Cochamó.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -3459,7 +3459,7 @@
     "lat": -31.1782,
     "lon": -71.0022,
     "alt": 887.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Combarbalá.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -3779,7 +3779,7 @@
     "lat": -35.3318,
     "lon": -72.4117,
     "alt": 18.0,
-    "radio_km": 15.0,
+    "radio_km": 15.63,
     "csv_file": "Constitución.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2016-2021), Sat=100%",
     "global_h_monthly": [
@@ -4163,7 +4163,7 @@
     "lat": -45.5779,
     "lon": -72.0658,
     "alt": 310.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Coyhaique.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015)",
     "global_h_monthly": [
@@ -4291,7 +4291,7 @@
     "lat": -38.933,
     "lon": -72.0319,
     "alt": 366.0,
-    "radio_km": 15.0,
+    "radio_km": 15.24,
     "csv_file": "Cunco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -4547,7 +4547,7 @@
     "lat": -39.359,
     "lon": -71.5872,
     "alt": 389.0,
-    "radio_km": 15.0,
+    "radio_km": 15.52,
     "csv_file": "Curarrehue.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -4931,7 +4931,7 @@
     "lat": -31.4644,
     "lon": -71.4347,
     "alt": 499.0,
-    "radio_km": 15.0,
+    "radio_km": 15.72,
     "csv_file": "El_Almendrillo.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -6019,7 +6019,7 @@
     "lat": -26.2462,
     "lon": -69.6258,
     "alt": 2228.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "El_Salvador.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=59%",
     "global_h_monthly": [
@@ -6659,7 +6659,7 @@
     "lat": -43.1858,
     "lon": -71.8667,
     "alt": 351.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Futaleufú.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -7299,7 +7299,7 @@
     "lat": -19.9958,
     "lon": -69.7725,
     "alt": 1108.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Huara.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2008-2019), Sat=2%",
     "global_h_monthly": [
@@ -8131,7 +8131,7 @@
     "lat": -29.5116,
     "lon": -71.2014,
     "alt": 597.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "La_Higuera.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -10371,7 +10371,7 @@
     "lat": -38.4541,
     "lon": -71.3706,
     "alt": 918.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Lonquimay.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -10947,7 +10947,7 @@
     "lat": -31.9122,
     "lon": -71.5139,
     "alt": 7.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Los_Vilos.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -11331,7 +11331,7 @@
     "lat": -22.3451,
     "lon": -69.6617,
     "alt": 1257.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "María_Elena.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2012-2019)",
     "global_h_monthly": [
@@ -11715,7 +11715,7 @@
     "lat": -38.8532,
     "lon": -71.695,
     "alt": 474.0,
-    "radio_km": 15.0,
+    "radio_km": 15.24,
     "csv_file": "Melipeuco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -11971,7 +11971,7 @@
     "lat": -40.4931,
     "lon": -73.5389,
     "alt": 224.0,
-    "radio_km": 15.0,
+    "radio_km": 17.62,
     "csv_file": "Misión_San_Juan_de_la_Costa.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -12547,7 +12547,7 @@
     "lat": -40.7104,
     "lon": -72.3889,
     "alt": 278.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Ñilque.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -12611,7 +12611,7 @@
     "lat": -20.4698,
     "lon": -69.7861,
     "alt": 1000.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Oficina_Virginia.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2008-2019)",
     "global_h_monthly": [
@@ -13059,7 +13059,7 @@
     "lat": -40.0707,
     "lon": -72.8725,
     "alt": 104.0,
-    "radio_km": 15.0,
+    "radio_km": 15.05,
     "csv_file": "Paillaco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -13187,7 +13187,7 @@
     "lat": -43.6178,
     "lon": -71.8039,
     "alt": 253.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Palena.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -13315,7 +13315,7 @@
     "lat": -44.401,
     "lon": -73.6006,
     "alt": 0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Pangal.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -13379,7 +13379,7 @@
     "lat": -39.642,
     "lon": -72.3333,
     "alt": 143.0,
-    "radio_km": 15.0,
+    "radio_km": 19.74,
     "csv_file": "Panguipulli.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -14595,7 +14595,7 @@
     "lat": -34.3852,
     "lon": -72.0044,
     "alt": 15.0,
-    "radio_km": 15.0,
+    "radio_km": 15.34,
     "csv_file": "Pichilemu.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -14659,7 +14659,7 @@
     "lat": -36.6534,
     "lon": -71.2078,
     "alt": 2210.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Pichirrincón.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -15363,7 +15363,7 @@
     "lat": -54.9358,
     "lon": -67.6061,
     "alt": 16.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Puerto_Williams.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2001-2020), Sat=92%",
     "global_h_monthly": [
@@ -15555,7 +15555,7 @@
     "lat": -53.1548,
     "lon": -70.9111,
     "alt": 18.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Punta_Arenas.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2001-2020)",
     "global_h_monthly": [
@@ -16259,7 +16259,7 @@
     "lat": -37.835,
     "lon": -71.4103,
     "alt": 1804.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Queuco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -16835,7 +16835,7 @@
     "lat": -46.1435,
     "lon": -74.2128,
     "alt": 10.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Quitralco.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=94%",
     "global_h_monthly": [
@@ -18947,7 +18947,7 @@
     "lat": -22.9108,
     "lon": -68.2,
     "alt": 2432.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "San_Pedro_de_Atacama.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2009-2014)",
     "global_h_monthly": [
@@ -19843,7 +19843,7 @@
     "lat": -22.8917,
     "lon": -69.32,
     "alt": 1624.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Sierra_Gorda.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2012-2019), Sat=47%",
     "global_h_monthly": [
@@ -19907,7 +19907,7 @@
     "lat": -18.1128,
     "lon": -69.5075,
     "alt": 5824.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Taapacá.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2017), Sat=100%",
     "global_h_monthly": [
@@ -20227,7 +20227,7 @@
     "lat": -25.4078,
     "lon": -70.4856,
     "alt": 15.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Taltal.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -20611,7 +20611,7 @@
     "lat": -38.3439,
     "lon": -73.4933,
     "alt": 15.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Tirúa.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -20739,7 +20739,7 @@
     "lat": -30.2572,
     "lon": -71.4928,
     "alt": 14.0,
-    "radio_km": 15.0,
+    "radio_km": 18.36,
     "csv_file": "Tongoy.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -20931,7 +20931,7 @@
     "lat": -28.575,
     "lon": -70.7614,
     "alt": 388.0,
-    "radio_km": 15.0,
+    "radio_km": 15.91,
     "csv_file": "Vallenar.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -21059,7 +21059,7 @@
     "lat": -52.7093,
     "lon": -69.2947,
     "alt": 17.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Victoria_Norte.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2001-2020), Sat=48%",
     "global_h_monthly": [
@@ -21379,7 +21379,7 @@
     "lat": -46.3021,
     "lon": -72.3839,
     "alt": 1337.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Villa_Cerro_Castillo.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=90%",
     "global_h_monthly": [
@@ -21443,7 +21443,7 @@
     "lat": -48.473,
     "lon": -72.8475,
     "alt": 1071.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "Villa_O_Higgins.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1996-2015), Sat=100%",
     "global_h_monthly": [
@@ -21507,7 +21507,7 @@
     "lat": -33.7435,
     "lon": -69.9889,
     "alt": 4342.0,
-    "radio_km": 15.0,
+    "radio_km": 17.78,
     "csv_file": "Villa_del_Valle.CSV",
     "fuente_meteo": "Meteonorm 8.2 (2010-2019), Sat=100%",
     "global_h_monthly": [
@@ -22019,7 +22019,7 @@
     "lat": -22.4567,
     "lon": -68.9237,
     "alt": 2267.0,
-    "radio_km": 15.0,
+    "radio_km": 20.0,
     "csv_file": "calama.CSV",
     "fuente_meteo": "Meteonorm 8.2 (1997-2016)",
     "global_h_monthly": [
