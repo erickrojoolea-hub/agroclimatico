@@ -1,7 +1,7 @@
 """
-Visor Agroclimático Interactivo - Estilo Fernando Santibáñez / INFODEP
+Visor Agroclimatico Interactivo - Estilo Fernando Santibanez / INFODEP
 ======================================================================
-Mapa clickeable → detección de localidad → informe automático.
+Mapa clickeable -> deteccion de localidad -> informe automatico.
 Solo comunas con datos PVsyst disponibles se habilitan.
 """
 import streamlit as st
@@ -33,21 +33,21 @@ try:
 except Exception:
     GEE_AVAILABLE = False
 
-# ── Registro de comunas con datos disponibles ────────────────────────────────
-# Cada entrada: nombre, lat, lon, alt, archivo_pvsyst, precipitación mensual
+# -- Registro de comunas con datos disponibles --------------------------------
+# Cada entrada: nombre, lat, lon, alt, archivo_pvsyst, precipitacion mensual
 COMUNAS_DB = {
-    "Curacaví": {
+    "Curacavi": {
         "lat": -33.40,
         "lon": -71.13,
         "alt": 200,
         "radio_km": 10,
-        "pvsyst_file": None,  # se busca automáticamente
+        "pvsyst_file": None,  # se busca automaticamente
         "precip": [1, 7, 5, 12, 78, 111, 84, 72, 22, 15, 7, 3],
         "hr": [55, 57, 60, 65, 73, 79, 80, 77, 70, 64, 58, 55],
         "fuente_meteo": "Meteonorm 8.2 (2010-2019)",
         "region": "Metropolitana",
     },
-    "Talhuén": {
+    "Talhuen": {
         "lat": -34.4873,
         "lon": -71.3377,
         "alt": 144,
@@ -65,17 +65,17 @@ COMUNAS_DB = {
             [-71.34349, -34.48441],
         ],
     },
-    # ── Agregar más comunas aquí ──
+    # -- Agregar mas comunas aqui --
 }
 
 # Paths posibles para archivos PVsyst por comuna
 _BASE = os.path.dirname(os.path.abspath(__file__))
 PVSYST_FILES = {
-    "Curacaví": [
+    "Curacavi": [
         os.path.join(_BASE, "data", "Curacavi.CSV"),
         "/Users/erickrojoolea/Downloads/Curacavi.CSV",
     ],
-    "Talhuén": [
+    "Talhuen": [
         os.path.join(_BASE, "data", "Talhuen san vicente.CSV"),
         "/Users/erickrojoolea/Downloads/Talhuen san vicente.CSV",
     ],
@@ -97,7 +97,7 @@ def find_pvsyst_file(comuna_name=None):
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
-    """Distancia en km entre dos puntos geográficos."""
+    """Distancia en km entre dos puntos geograficos."""
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -106,7 +106,7 @@ def haversine_km(lat1, lon1, lat2, lon2):
 
 
 def find_nearest_comuna(lat, lon):
-    """Encuentra la comuna más cercana con datos PVsyst. Retorna (nombre, info, distancia_km) o None."""
+    """Encuentra la comuna mas cercana con datos PVsyst. Retorna (nombre, info, distancia_km) o None."""
     best = None
     best_dist = float('inf')
     for nombre, info in COMUNAS_DB.items():
@@ -149,7 +149,7 @@ def find_predial_comuna(lat, lon):
     if not comuna_name:
         return None
 
-    # Verificar si existe en la BD (búsqueda flexible)
+    # Verificar si existe en la BD (busqueda flexible)
     available = get_available_comunas()
     # Match exacto
     if comuna_name in available:
@@ -158,24 +158,24 @@ def find_predial_comuna(lat, lon):
     for c in available:
         if c.upper() == comuna_name.upper():
             return c
-    # Match parcial (la comuna podría venir como "San Vicente de Tagua Tagua"
+    # Match parcial (la comuna podria venir como "San Vicente de Tagua Tagua"
     # pero en la BD ser "San Vicente")
     for c in available:
         if c.upper() in comuna_name.upper() or comuna_name.upper() in c.upper():
             return c
-    # No match — retornar el nombre detectado de todas formas
+    # No match -- retornar el nombre detectado de todas formas
     return comuna_name
 
 
-# ── Config ───────────────────────────────────────────────────────────────────
+# -- Config -------------------------------------------------------------------
 st.set_page_config(
-    page_title="Informes Agrícolas Chile",
+    page_title="Informes Agricolas Chile",
     page_icon="A",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Import predial engine (optional — may not exist yet)
+# Import predial engine (optional -- may not exist yet)
 try:
     from predial_engine import generate_predial_report, get_available_comunas
     from predial_pdf_generator import generate_predial_pdf
@@ -183,7 +183,38 @@ try:
 except Exception:
     PREDIAL_AVAILABLE = False
 
-# ── CSS ──────────────────────────────────────────────────────────────────────
+
+# -- Helpers ------------------------------------------------------------------
+
+def render_semaforo(label, semaforo, texto):
+    colors = {
+        "verde": ("#E8F5E9", "#2E7D32", "#1B5E20", "OK"),
+        "amarillo": ("#FFFDE7", "#F9A825", "#E65100", "!"),
+        "rojo": ("#FFEBEE", "#C62828", "#B71C1C", "X"),
+    }
+    bg, border, text_color, icon = colors.get(semaforo, colors["amarillo"])
+    st.markdown(f'''
+    <div style="background:{bg}; border-left:5px solid {border}; padding:10px 14px; border-radius:0 6px 6px 0; margin:4px 0;">
+        <span style="font-size:1.1rem;">{icon}</span>
+        <span style="font-weight:600; color:{text_color}; margin-left:6px;">{label}</span>
+        <span style="color:#555; font-size:0.85rem; margin-left:8px;">{texto}</span>
+    </div>
+    ''', unsafe_allow_html=True)
+
+
+def render_alertas(alertas):
+    """Render a list of alert strings as styled alert boxes."""
+    for alerta in (alertas or []):
+        st.markdown(f'<div class="alert-box">{alerta}</div>', unsafe_allow_html=True)
+
+
+def render_source(texto):
+    """Render a source citation at the bottom of a section."""
+    if texto:
+        st.markdown(f'<div class="source-citation">{texto}</div>', unsafe_allow_html=True)
+
+
+# -- CSS ----------------------------------------------------------------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
@@ -207,7 +238,7 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         margin-bottom: 0.5rem;
     }
-    .metric-card h3 { margin: 0; font-size: 0.72rem; color: #666; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric-card h3 { margin: 0; font-size: 0.82rem; color: #666; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .metric-card .value { font-size: 1.5rem; font-weight: 700; color: #2E7D32; }
     .metric-card .unit { font-size: 0.7rem; color: #999; }
 
@@ -260,10 +291,9 @@ st.markdown("""
         padding: 1.2rem;
         text-align: center;
         transition: border-color 0.2s;
-        cursor: pointer;
     }
     .product-card:hover { border-color: #2E7D32; }
-    .product-card.selected { border-color: #2E7D32; background: #F1F8E9; }
+    .product-card.selected { border-color: #2E7D32; background: #F1F8E9; box-shadow: 0 0 0 2px #2E7D32; }
     .product-card h3 { margin: 0 0 0.3rem 0; font-size: 1.1rem; color: #1B5E20; }
     .product-card .price { font-size: 1.4rem; font-weight: 700; color: #2E7D32; }
     .product-card .price-combo { font-size: 1.4rem; font-weight: 700; color: #E65100; }
@@ -287,6 +317,34 @@ st.markdown("""
         background-color: #2E7D32 !important;
         color: white !important;
     }
+
+    /* Alert boxes */
+    .alert-box {
+        background: #FFF3E0;
+        border-left: 4px solid #FF9800;
+        padding: 0.8rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
+        color: #E65100;
+    }
+    .alert-box.critical {
+        background: #FFEBEE;
+        border-left-color: #C62828;
+        color: #B71C1C;
+    }
+    .alert-box.success {
+        background: #E8F5E9;
+        border-left-color: #2E7D32;
+        color: #1B5E20;
+    }
+    .source-citation {
+        font-size: 0.75rem;
+        color: #999;
+        border-top: 1px solid #eee;
+        padding-top: 0.4rem;
+        margin-top: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -301,7 +359,7 @@ def render_metric(label, value, unit=""):
     """, unsafe_allow_html=True)
 
 
-# ── Inicializar session_state ────────────────────────────────────────────────
+# -- Inicializar session_state ------------------------------------------------
 if 'pin_lat' not in st.session_state:
     st.session_state.pin_lat = None
     st.session_state.pin_lon = None
@@ -311,43 +369,46 @@ if 'pin_lat' not in st.session_state:
     st.session_state.predial_processed = False
 
 
-# ── Header ───────────────────────────────────────────────────────────────────
+# -- Header -------------------------------------------------------------------
 st.markdown("""
 <div class="main-header">
-    <h1>Informes Agrícolas Chile</h1>
-    <p>Informes meteorológicos y prediales para la toma de decisiones agrícolas</p>
+    <h1>Informes Agricolas Chile</h1>
+    <p>Informes meteorologicos y prediales para la toma de decisiones agricolas</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Selección de producto ───────────────────────────────────────────────────
+# -- Seleccion de producto (does NOT gate the map) ----------------------------
 if 'producto' not in st.session_state:
     st.session_state.producto = None
 
+producto = st.session_state.get('producto')
+_selected_class = lambda key: "selected" if producto == key else ""
+
 col_p1, col_p2, col_p3 = st.columns(3)
 with col_p1:
-    st.markdown("""
-    <div class="product-card">
-        <h3>Informe Meteorológico</h3>
+    st.markdown(f"""
+    <div class="product-card {_selected_class('meteo')}">
+        <h3>Informe Meteorologico</h3>
         <div class="price">$100.000</div>
         <div class="desc">
-            Análisis agroclimático completo con datos PVsyst/Meteonorm 8.2.
-            Temperaturas, heladas, días-grado, balance hídrico, aptitud de cultivos,
-            NDVI satelital, energía solar. PDF descargable.
+            Analisis agroclimatico completo con datos PVsyst/Meteonorm 8.2.
+            Temperaturas, heladas, dias-grado, balance hidrico, aptitud de cultivos,
+            NDVI satelital, energia solar. PDF descargable.
         </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("Seleccionar Meteorológico", key="btn_meteo", use_container_width=True):
+    if st.button("Seleccionar Meteorologico", key="btn_meteo", use_container_width=True):
         st.session_state.producto = "meteo"
         st.rerun()
 
 with col_p2:
-    st.markdown("""
-    <div class="product-card">
+    st.markdown(f"""
+    <div class="product-card {_selected_class('predial')}">
         <h3>Informe Predial</h3>
         <div class="price">$100.000</div>
         <div class="desc">
-            Análisis territorial por comuna: producción agrícola real (catastro frutícola),
-            derechos de agua (DGA), infraestructura eléctrica, uso de suelo,
+            Analisis territorial por comuna: produccion agricola real (catastro fruticola),
+            derechos de agua (DGA), infraestructura electrica, uso de suelo,
             riesgos territoriales. Estilo Autofact.
         </div>
     </div>
@@ -357,15 +418,15 @@ with col_p2:
         st.rerun()
 
 with col_p3:
-    st.markdown("""
-    <div class="product-card">
+    st.markdown(f"""
+    <div class="product-card {_selected_class('combo')}">
         <span class="tag">MEJOR VALOR</span>
         <h3>Combo Completo</h3>
         <div class="price-combo">$150.000</div>
         <div class="desc">
             Ambos informes juntos con un 25% de descuento.
-            Meteorológico + Predial en un solo paquete.
-            La visión completa para decisiones de inversión agrícola.
+            Meteorologico + Predial en un solo paquete.
+            La vision completa para decisiones de inversion agricola.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -375,21 +436,22 @@ with col_p3:
 
 st.markdown("---")
 
-# Mostrar producto seleccionado
+# Derive show flags -- default to showing both if no product selected yet
 producto = st.session_state.get('producto')
-show_meteo = producto in ('meteo', 'combo')
-show_predial = producto in ('predial', 'combo')
+show_meteo = producto in ('meteo', 'combo') if producto else True
+show_predial = producto in ('predial', 'combo') if producto else True
 
-_product_labels = {'meteo': 'Meteorológico', 'predial': 'Predial', 'combo': 'Combo'}
+_product_labels = {'meteo': 'Meteorologico', 'predial': 'Predial', 'combo': 'Combo'}
 if producto:
     st.markdown(f'<div class="hint-box"><b>Producto seleccionado:</b> {_product_labels.get(producto, producto)}</div>',
                 unsafe_allow_html=True)
+else:
+    st.markdown('<div class="hint-box"><b>Seleccione un producto arriba</b>, o haga click en el mapa para explorar.</div>',
+                unsafe_allow_html=True)
 
-if producto is None:
-    st.info("Seleccione un tipo de informe para continuar.")
-    st.stop()
+# -- NO st.stop() here -- map is always shown ---------------------------------
 
-# ── Layout: mapa grande + panel derecho ──────────────────────────────────────
+# -- Layout: mapa grande + panel derecho --------------------------------------
 col_map, col_panel = st.columns([3, 2])
 
 with col_map:
@@ -430,7 +492,7 @@ with col_map:
                 fillOpacity=0.7,
                 popup=folium.Popup(
                     f"<b>{nombre}</b><br>"
-                    f"Región: {info['region']}<br>"
+                    f"Region: {info['region']}<br>"
                     f"Alt: {info['alt']}m<br>"
                     f"<i>Datos PVsyst disponibles</i>",
                     max_width=200
@@ -457,7 +519,7 @@ with col_map:
                     fillColor='#FFC107',
                     fillOpacity=0.25,
                     weight=2,
-                    popup=f"Parcela — {nombre}",
+                    popup=f"Parcela -- {nombre}",
                     tooltip="Parcela",
                 ).add_to(m)
 
@@ -498,19 +560,19 @@ with col_map:
             st.session_state.pop('predial_pdf', None)
             st.rerun()
 
-    # Indicación de comunas disponibles (meteo)
+    # Indicacion de comunas disponibles (meteo)
     if show_meteo and st.session_state.comuna_match is None:
         st.markdown('<div class="hint-box">'
-                    '<b>Comunas con datos meteorológicos:</b> '
+                    '<b>Comunas con datos meteorologicos:</b> '
                     + ' '.join(f'<span class="comuna-chip">{n}</span>' for n in COMUNAS_DB.keys())
                     + '</div>',
                     unsafe_allow_html=True)
 
 
-# ── Panel derecho ────────────────────────────────────────────────────────────
+# -- Panel derecho ------------------------------------------------------------
 with col_panel:
 
-    # Selector rápido de localidad (solo comunas con PVsyst, para meteo)
+    # Selector rapido de localidad (solo comunas con PVsyst, para meteo)
     if show_meteo:
         opciones = ["-- Haga click en el mapa --"] + list(COMUNAS_DB.keys())
         current_idx = 0
@@ -543,18 +605,18 @@ with col_panel:
     else:
         seleccion = "-- Haga click en el mapa --"
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # SIN SELECCIÓN: instrucciones
-    # ═══════════════════════════════════════════════════════════════════════
+    # =========================================================================
+    # SIN SELECCION: instrucciones
+    # =========================================================================
     if st.session_state.pin_lat is None:
         st.markdown("""
         <div class="site-card">
             <h3>Seleccione un punto en el mapa</h3>
             <div class="detail">
-                Haga click en cualquier ubicación de Chile para identificar
+                Haga click en cualquier ubicacion de Chile para identificar
                 la comuna y generar los informes disponibles.<br><br>
-                El sistema detectará automáticamente la comuna y mostrará
-                los datos disponibles para su ubicación.
+                El sistema detectara automaticamente la comuna y mostrara
+                los datos disponibles para su ubicacion.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -564,38 +626,38 @@ with col_panel:
                         + ', '.join(COMUNAS_DB.keys()) + '</div>',
                         unsafe_allow_html=True)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # CON PIN: mostrar ubicación + informes disponibles
-    # ═══════════════════════════════════════════════════════════════════════
+    # =========================================================================
+    # CON PIN: mostrar ubicacion + informes disponibles
+    # =========================================================================
     else:
         pin_lat = st.session_state.pin_lat
         pin_lon = st.session_state.pin_lon
         meteo_match = st.session_state.comuna_match  # (nombre, info, dist) o None
         predial_comuna = st.session_state.get('predial_comuna')
 
-        # ── Tarjeta de ubicación ──────────────────────────────────────
+        # -- Tarjeta de ubicacion -------------------------------------------
         st.markdown(f"""
         <div class="site-card">
-            <h3>Ubicación seleccionada</h3>
+            <h3>Ubicacion seleccionada</h3>
             <div class="detail">
-                <b>Coordenadas:</b> {pin_lat:.4f}°, {pin_lon:.4f}°
+                <b>Coordenadas:</b> {pin_lat:.4f}, {pin_lon:.4f}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # ── INFORME METEOROLÓGICO ─────────────────────────────────────
+        # -- INFORME METEOROLOGICO ------------------------------------------
         if show_meteo:
             st.markdown("---")
             if meteo_match:
                 nombre_match, info_match, dist_km = meteo_match
                 st.markdown(f"""
                 <div class="site-card">
-                    <h3>Meteorológico — {nombre_match}</h3>
+                    <h3>Meteorologico -- {nombre_match}</h3>
                     <div class="detail">
-                        <b>Región:</b> {info_match['region']}<br>
+                        <b>Region:</b> {info_match['region']}<br>
                         <b>Distancia:</b> {dist_km:.1f} km<br>
                         <b>Altitud:</b> {info_match['alt']} m<br>
-                        <b>Precipitación:</b> {sum(info_match['precip']):.0f} mm/año<br>
+                        <b>Precipitacion:</b> {sum(info_match['precip']):.0f} mm/anio<br>
                         <b>Fuente:</b> {info_match['fuente_meteo']}
                     </div>
                 </div>
@@ -612,16 +674,16 @@ with col_panel:
                 )
 
                 generar = st.button(
-                    "Generar Informe Meteorológico",
+                    "Generar Informe Meteorologico",
                     type="primary",
                     use_container_width=True,
                     key="btn_generar"
                 )
 
-                with st.expander("Configuración avanzada"):
+                with st.expander("Configuracion avanzada"):
                     nombre_predio = st.text_input("Nombre del predio (opcional)", value="",
                                                   key="predio_input")
-                    st.markdown("**Precipitación mensual (mm)**")
+                    st.markdown("**Precipitacion mensual (mm)**")
                     meses_n = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
                                'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
                     precip_inputs = []
@@ -643,9 +705,9 @@ with col_panel:
                 if generar:
                     pvsyst_path = find_pvsyst_file(nombre_match)
                     if pvsyst_path is None:
-                        st.error(f"No se encontró el archivo PVsyst para {nombre_match}.")
+                        st.error(f"No se encontro el archivo PVsyst para {nombre_match}.")
                     else:
-                        with st.spinner("Procesando 8760 horas de datos meteorológicos..."):
+                        with st.spinner("Procesando 8760 horas de datos meteorologicos..."):
                             try:
                                 df = parse_pvsyst_csv(pvsyst_path)
                                 monthly_df = calc_monthly_climate(
@@ -685,13 +747,13 @@ with col_panel:
             else:
                 st.markdown(f"""
                 <div class="no-data-box">
-                    <h2>Meteorológico — No disponible</h2>
-                    <p>No hay datos PVsyst para esta ubicación.<br>
+                    <h2>Meteorologico -- No disponible</h2>
+                    <p>No hay datos PVsyst para esta ubicacion.<br>
                     Disponible solo en: {', '.join(COMUNAS_DB.keys())}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
-        # ── INFORME PREDIAL ───────────────────────────────────────────
+        # -- INFORME PREDIAL (auto-generate on pin drop) --------------------
         if show_predial:
             st.markdown("---")
             if not PREDIAL_AVAILABLE:
@@ -699,30 +761,27 @@ with col_panel:
             elif predial_comuna:
                 st.markdown(f"""
                 <div class="site-card">
-                    <h3>Predial — {predial_comuna}</h3>
+                    <h3>Predial -- {predial_comuna}</h3>
                     <div class="detail">
                         Comuna detectada a partir de las coordenadas seleccionadas.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Auto-generar si aún no se ha hecho, o botón
+                # Auto-generate predial report when comuna is identified
                 if not st.session_state.get('predial_processed'):
-                    btn_predial_gen = st.button(
-                        "Generar Informe Predial",
-                        type="primary",
-                        use_container_width=True,
-                        key="btn_predial_gen",
-                    )
-                    if btn_predial_gen:
-                        with st.spinner(f"Consultando bases de datos para {predial_comuna}..."):
-                            try:
-                                predial_report = generate_predial_report(predial_comuna)
-                                st.session_state['predial_report'] = predial_report
-                                st.session_state['predial_processed'] = True
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error: {str(e)}")
+                    with st.spinner(f"Consultando bases de datos para {predial_comuna}..."):
+                        try:
+                            predial_report = generate_predial_report(
+                                predial_comuna,
+                                lat=st.session_state.pin_lat,
+                                lon=st.session_state.pin_lon,
+                            )
+                            st.session_state['predial_report'] = predial_report
+                            st.session_state['predial_processed'] = True
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error al generar informe predial: {str(e)}")
                 else:
                     pr = st.session_state.get('predial_report', {})
                     secciones = pr.get('secciones_disponibles', [])
@@ -732,107 +791,137 @@ with col_panel:
             else:
                 st.markdown(f"""
                 <div class="no-data-box">
-                    <h2>Predial — Identificando comuna...</h2>
-                    <p>No se pudo identificar la comuna para esta ubicación.
-                    Intente hacer click en otra posición.</p>
+                    <h2>Predial -- Identificando comuna...</h2>
+                    <p>No se pudo identificar la comuna para esta ubicacion.
+                    Intente hacer click en otra posicion.</p>
                 </div>
                 """, unsafe_allow_html=True)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
 # RESULTADOS: INFORME PREDIAL (debajo del mapa, full width)
-# ══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
 if show_predial and st.session_state.get('predial_processed') and st.session_state.get('predial_report'):
     pr = st.session_state['predial_report']
     st.markdown("---")
 
-    # Header + PDF download side by side
-    _hdr_col, _pdf_col = st.columns([3, 1])
-    with _hdr_col:
-        st.markdown(f"## Informe Predial — {pr['comuna']}")
-        if pr.get('region'):
-            st.caption(f"Región: {pr['region']} | Provincia: {pr.get('provincia', 'N/D')}")
-    with _pdf_col:
-        if pr.get('tiene_datos') and PREDIAL_AVAILABLE:
-            if st.button("Generar PDF", type="primary", key="btn_predial_pdf", use_container_width=True):
-                with st.spinner("Generando informe PDF..."):
-                    try:
-                        pdf_bytes = generate_predial_pdf(pr)
-                        st.session_state['predial_pdf'] = pdf_bytes
-                    except Exception as e:
-                        st.error(f"Error al generar PDF: {e}")
-            if 'predial_pdf' in st.session_state:
-                st.download_button(
-                    "Descargar PDF",
-                    data=st.session_state['predial_pdf'],
-                    file_name=f"Informe_Predial_{pr['comuna']}.pdf",
-                    mime="application/pdf",
-                    key="dl_predial_pdf",
-                    use_container_width=True,
-                )
+    # Header (no PDF button here -- PDF is in Descargas tab only)
+    st.markdown(f"## Informe Predial -- {pr['comuna']}")
+    if pr.get('region'):
+        st.caption(f"Region: {pr['region']} | Provincia: {pr.get('provincia', 'N/D')}")
 
     if not pr.get('tiene_datos'):
         st.warning(f"No se encontraron datos para la comuna {pr['comuna']} en las bases de datos disponibles.")
     else:
-        prod = pr['produccion']
-        agua = pr['agua']
-        elec = pr['electrico']
+        prod = pr.get('produccion', {})
+        agua = pr.get('agua', {})
+        elec = pr.get('electrico', {})
+        uso_suelo = pr.get('uso_suelo', {})
+        riesgos = pr.get('riesgos', {})
+        infraestructura = pr.get('infraestructura', {})
+        vecinos = pr.get('vecinos', {})
+        recomendaciones = pr.get('recomendaciones', {})
 
-        # ── KPIs + Semáforo hídrico ──────────────────────────────────
+        # -- KPIs + Semaforo grid -----------------------------------------
         mc1, mc2, mc3, mc4, mc5 = st.columns(5)
         with mc1:
-            render_metric("Superficie Frutícola",
-                          f"{prod['total_superficie_ha']:,.0f}" if prod['disponible'] else "N/D", "ha")
+            render_metric("Superficie Fruticola",
+                          f"{prod.get('total_superficie_ha', 0):,.0f}" if prod.get('disponible') else "N/D", "ha")
         with mc2:
             render_metric("Especies",
-                          str(len(prod['especies'])) if prod['disponible'] else "N/D", "")
+                          str(len(prod.get('especies', []))) if prod.get('disponible') else "N/D", "")
         with mc3:
             render_metric("Patentes de Agua",
-                          f"{agua['num_patentes']:,}" if agua['disponible'] else "N/D", "")
+                          f"{agua.get('num_patentes', 0):,}" if agua.get('disponible') else "N/D", "")
         with mc4:
-            render_metric("Clientes Eléctricos",
-                          f"{elec['total_clientes']:,}" if elec['disponible'] else "N/D", "")
+            render_metric("Clientes Electricos",
+                          f"{elec.get('total_clientes', 0):,}" if elec.get('disponible') else "N/D", "")
         with mc5:
-            # Semáforo hídrico
-            if agua['disponible'] and agua.get('monto_total') and agua['monto_total'] > 0:
+            # Semaforo hidrico
+            if agua.get('disponible') and agua.get('monto_total') and agua['monto_total'] > 0:
                 ratio = agua['saldo_total'] / agua['monto_total']
                 if ratio < 0.3:
                     sem_color, sem_label = '#2E7D32', 'Favorable'
                 elif ratio < 0.6:
-                    sem_color, sem_label = '#F9A825', 'Precaución'
+                    sem_color, sem_label = '#F9A825', 'Precaucion'
                 else:
-                    sem_color, sem_label = '#C62828', 'Crítico'
+                    sem_color, sem_label = '#C62828', 'Critico'
                 st.markdown(f"""
                 <div class="metric-card" style="border-left-color: {sem_color};">
-                    <h3>Situación Hídrica</h3>
+                    <h3>Situacion Hidrica</h3>
                     <span class="value" style="color: {sem_color};">{sem_label}</span>
                     <span class="unit">ratio {ratio:.0%}</span>
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                render_metric("Situación Hídrica", "N/D", "")
+                render_metric("Situacion Hidrica", "N/D", "")
 
-        # ── Tabs predial ─────────────────────────────────────────────
-        predial_tabs = st.tabs(["Producción", "Agua", "Eléctrico", "Descargas"])
+        # -- Tabs predial (8 tabs) ----------------------------------------
+        predial_tabs = st.tabs([
+            "Resumen", "Produccion", "Agua", "Uso de Suelo",
+            "Electrico", "Riesgos", "Vecinos", "Descargas"
+        ])
 
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
 
-        # ── Tab: Producción Agrícola ─────────────────────────────────
+        # -- Tab: Resumen (semaforo grid + KPIs + overview) ---------------
         with predial_tabs[0]:
-            st.markdown("#### Producción Agrícola — Catastro Frutícola")
-            if not prod['disponible']:
-                st.info("No hay datos de catastro frutícola para esta comuna.")
+            st.markdown("#### Resumen Predial")
+
+            # Semaforo grid -- show each section's status
+            section_semaforos = []
+            for sec_name, sec_label in [
+                ('produccion', 'Produccion Agricola'),
+                ('agua', 'Derechos de Agua'),
+                ('electrico', 'Infraestructura Electrica'),
+                ('uso_suelo', 'Uso de Suelo'),
+                ('riesgos', 'Riesgos'),
+            ]:
+                sec = pr.get(sec_name, {})
+                sem = sec.get('semaforo', 'amarillo')
+                txt = sec.get('texto_analitico', '')
+                # Show first sentence only for overview
+                txt_short = txt.split('.')[0] + '.' if txt else 'Sin informacion disponible.'
+                render_semaforo(sec_label, sem, txt_short)
+
+            # Quick overview text
+            if prod.get('texto_analitico'):
+                st.markdown("---")
+                st.markdown("##### Vision General")
+                st.markdown(prod['texto_analitico'])
+
+        # -- Tab: Produccion Agricola -------------------------------------
+        with predial_tabs[1]:
+            st.markdown("#### Produccion Agricola -- Catastro Fruticola")
+
+            # Analytical text at top
+            if prod.get('texto_analitico'):
+                st.markdown(prod['texto_analitico'])
+            # Alerts
+            render_alertas(prod.get('alertas'))
+
+            if not prod.get('disponible'):
+                st.info("No hay datos de catastro fruticola para esta comuna.")
             else:
-                st.markdown(f"**{len(prod['especies'])} especies** | "
-                            f"**{prod['total_superficie_ha']:,.1f} ha** totales | "
-                            f"**{prod['total_explotaciones']:,} explotaciones**")
+                st.markdown(f"**{len(prod.get('especies', []))} especies** | "
+                            f"**{prod.get('total_superficie_ha', 0):,.1f} ha** totales | "
+                            f"**{prod.get('total_explotaciones', 0):,} explotaciones**")
+
+                # Tipo de productor and comparacion nacional (new fields)
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    if prod.get('tipo_productor'):
+                        st.markdown(f"**Tipo de productor:** {prod['tipo_productor']}")
+                with col_info2:
+                    if prod.get('comparacion_nacional'):
+                        st.markdown(f"**Comparacion nacional:** {prod['comparacion_nacional']}")
 
                 col_chart, col_pie = st.columns([3, 2])
 
                 with col_chart:
-                    if prod['especies']:
+                    if prod.get('especies'):
                         esp_names = [e['especie'] for e in prod['especies'][:12]]
                         esp_areas = [e['superficie_ha'] for e in prod['especies'][:12]]
 
@@ -855,9 +944,9 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                         plt.close()
 
                 with col_pie:
-                    if prod['especies'] and len(prod['especies']) >= 2:
+                    if prod.get('especies') and len(prod['especies']) >= 2:
                         top5 = prod['especies'][:5]
-                        other_ha = prod['total_superficie_ha'] - sum(e['superficie_ha'] for e in top5)
+                        other_ha = prod.get('total_superficie_ha', 0) - sum(e['superficie_ha'] for e in top5)
                         pie_labels = [e['especie'] for e in top5]
                         pie_vals = [e['superficie_ha'] for e in top5]
                         if other_ha > 0:
@@ -869,15 +958,15 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                         ax_pie.pie(pie_vals, labels=pie_labels, autopct='%1.0f%%',
                                    colors=colors_pie[:len(pie_vals)], textprops={'fontsize': 8},
                                    startangle=90, pctdistance=0.8)
-                        ax_pie.set_title('Distribución', fontsize=10, fontweight='bold', color='#2E7D32')
+                        ax_pie.set_title('Distribucion', fontsize=10, fontweight='bold', color='#2E7D32')
                         plt.tight_layout()
                         st.pyplot(fig_pie)
                         plt.close()
 
                 # Tabla de especies
-                if prod['especies']:
+                if prod.get('especies'):
                     st.markdown("##### Detalle por Especie")
-                    total_ha = prod['total_superficie_ha'] or 1
+                    total_ha = prod.get('total_superficie_ha', 1) or 1
                     esp_data = []
                     for e in prod['especies']:
                         pct = (e['superficie_ha'] / total_ha) * 100
@@ -891,37 +980,53 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
 
                 col_riego, col_var = st.columns(2)
                 with col_riego:
-                    if prod['metodos_riego']:
-                        st.markdown("##### Métodos de Riego")
+                    if prod.get('metodos_riego'):
+                        st.markdown("##### Metodos de Riego")
                         riego_df = pd.DataFrame(prod['metodos_riego'])
-                        riego_df.columns = ['Método', 'Registros', 'Superficie (ha)']
+                        riego_df.columns = ['Metodo', 'Registros', 'Superficie (ha)']
                         st.dataframe(riego_df, use_container_width=True, hide_index=True)
 
                 with col_var:
-                    if prod['variedades']:
+                    if prod.get('variedades'):
                         st.markdown("##### Top Variedades")
                         var_df = pd.DataFrame(prod['variedades'][:15])
                         var_df.columns = ['Especie', 'Variedad', 'Superficie (ha)', 'Registros']
                         st.dataframe(var_df, use_container_width=True, hide_index=True)
 
-        # ── Tab: Agua ────────────────────────────────────────────────
-        with predial_tabs[1]:
-            st.markdown("#### Derechos de Agua — DGA")
-            if not agua['disponible']:
+            render_source("Fuente: Catastro Fruticola CIREN-ODEPA")
+
+        # -- Tab: Agua ----------------------------------------------------
+        with predial_tabs[2]:
+            st.markdown("#### Derechos de Agua -- DGA")
+
+            # Analytical text
+            if agua.get('texto_analitico'):
+                st.markdown(agua['texto_analitico'])
+            render_alertas(agua.get('alertas'))
+
+            if not agua.get('disponible'):
                 st.info("No hay datos de patentes de agua para esta comuna.")
             else:
-                # Semáforo prominente
-                if agua.get('monto_total') and agua['monto_total'] > 0:
+                # Semaforo prominente
+                agua_semaforo = agua.get('semaforo', '')
+                if agua_semaforo:
+                    sem_txt = ''
+                    if agua.get('restriccion_hidrica'):
+                        sem_txt = agua['restriccion_hidrica']
+                    elif agua.get('agotamiento'):
+                        sem_txt = agua['agotamiento']
+                    render_semaforo("Situacion Hidrica", agua_semaforo, sem_txt)
+                elif agua.get('monto_total') and agua['monto_total'] > 0:
                     ratio = agua['saldo_total'] / agua['monto_total']
                     if ratio < 0.3:
                         sem_bg, sem_border, sem_text, sem_label = '#E8F5E9', '#2E7D32', '#1B5E20', 'FAVORABLE'
-                        sem_desc = "Bajo nivel de impago — buena disponibilidad hídrica."
+                        sem_desc = "Bajo nivel de impago -- buena disponibilidad hidrica."
                     elif ratio < 0.6:
-                        sem_bg, sem_border, sem_text, sem_label = '#FFFDE7', '#F9A825', '#E65100', 'PRECAUCIÓN'
+                        sem_bg, sem_border, sem_text, sem_label = '#FFFDE7', '#F9A825', '#E65100', 'PRECAUCION'
                         sem_desc = "Nivel moderado de saldos pendientes. Verificar disponibilidad."
                     else:
-                        sem_bg, sem_border, sem_text, sem_label = '#FFEBEE', '#C62828', '#B71C1C', 'CRÍTICO'
-                        sem_desc = "Alto impago — posible estrés hídrico o restricciones de uso."
+                        sem_bg, sem_border, sem_text, sem_label = '#FFEBEE', '#C62828', '#B71C1C', 'CRITICO'
+                        sem_desc = "Alto impago -- posible estres hidrico o restricciones de uso."
 
                     st.markdown(f"""
                     <div style="background:{sem_bg}; border-left:5px solid {sem_border};
@@ -936,16 +1041,20 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
 
                 col_a1, col_a2, col_a3 = st.columns(3)
                 with col_a1:
-                    render_metric("Patentes", f"{agua['num_patentes']:,}", "registradas")
+                    render_metric("Patentes", f"{agua.get('num_patentes', 0):,}", "registradas")
                 with col_a2:
                     render_metric("Saldo Promedio", f"${agua.get('saldo_promedio', 0):,.0f}", "CLP")
                 with col_a3:
-                    render_metric("Monto Promedio", f"${agua.get('monto_promedio', 0):,.0f}", "CLP")
+                    morosidad = agua.get('morosidad_pct')
+                    if morosidad is not None:
+                        render_metric("Morosidad", f"{morosidad:.1f}%", "de patentes")
+                    else:
+                        render_metric("Monto Promedio", f"${agua.get('monto_promedio', 0):,.0f}", "CLP")
 
                 col_tipo, col_evol = st.columns(2)
 
                 with col_tipo:
-                    if agua['por_tipo']:
+                    if agua.get('por_tipo'):
                         st.markdown("##### Por Tipo de Titular")
                         tipo_df = pd.DataFrame(agua['por_tipo'])
                         tipo_df.columns = ['Tipo', 'Cantidad', 'Saldo Total']
@@ -953,13 +1062,13 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                         st.dataframe(tipo_df, use_container_width=True, hide_index=True)
 
                 with col_evol:
-                    if agua['por_anio'] and len(agua['por_anio']) > 1:
-                        st.markdown("##### Evolución Anual")
+                    if agua.get('por_anio') and len(agua['por_anio']) > 1:
+                        st.markdown("##### Evolucion Anual")
                         anio_df = pd.DataFrame(agua['por_anio'])
                         fig_a, ax_a = plt.subplots(figsize=(6, 3.5))
                         ax_a.bar(anio_df['anio'].astype(str), anio_df['cantidad'],
                                  color='#42A5F5', edgecolor='#1565C0', lw=0.5)
-                        ax_a.set_ylabel('N° Patentes', fontsize=8)
+                        ax_a.set_ylabel('N Patentes', fontsize=8)
                         ax_a.grid(True, alpha=0.2, axis='y')
                         ax_a.spines['top'].set_visible(False)
                         ax_a.spines['right'].set_visible(False)
@@ -968,38 +1077,161 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                         st.pyplot(fig_a)
                         plt.close()
 
-        # ── Tab: Eléctrico ───────────────────────────────────────────
-        with predial_tabs[2]:
-            st.markdown("#### Infraestructura Eléctrica")
-            if not elec['disponible']:
-                st.info("No hay datos de infraestructura eléctrica para esta comuna.")
+                # New fields: por_concesion, oficinas_cbr
+                if agua.get('por_concesion'):
+                    st.markdown("##### Por Tipo de Concesion")
+                    conc_df = pd.DataFrame(agua['por_concesion'])
+                    st.dataframe(conc_df, use_container_width=True, hide_index=True)
+
+                if agua.get('oficinas_cbr'):
+                    st.markdown("##### Oficinas CBR Relacionadas")
+                    for ofi in agua['oficinas_cbr']:
+                        st.markdown(f"- {ofi}")
+
+            render_source("Fuente: Direccion General de Aguas (DGA), Registro de Patentes")
+
+        # -- Tab: Uso de Suelo (NEW) --------------------------------------
+        with predial_tabs[3]:
+            st.markdown("#### Uso de Suelo")
+            if uso_suelo and uso_suelo.get('disponible', uso_suelo.get('distribucion')):
+                if uso_suelo.get('texto_analitico'):
+                    st.markdown(uso_suelo['texto_analitico'])
+                render_alertas(uso_suelo.get('alertas'))
+
+                if uso_suelo.get('distribucion'):
+                    dist_data = uso_suelo['distribucion']
+                    if isinstance(dist_data, list):
+                        st.dataframe(pd.DataFrame(dist_data), use_container_width=True, hide_index=True)
+                    elif isinstance(dist_data, dict):
+                        for k, v in dist_data.items():
+                            render_metric(k, f"{v:,.1f}" if isinstance(v, (int, float)) else str(v))
+                render_source("Fuente: CIREN, CONAF")
             else:
+                st.info("No hay datos de uso de suelo disponibles para esta comuna.")
+
+        # -- Tab: Electrico -----------------------------------------------
+        with predial_tabs[4]:
+            st.markdown("#### Infraestructura Electrica")
+
+            if elec.get('texto_analitico'):
+                st.markdown(elec['texto_analitico'])
+            render_alertas(elec.get('alertas'))
+
+            if not elec.get('disponible'):
+                st.info("No hay datos de infraestructura electrica para esta comuna.")
+            else:
+                # Semaforo if available
+                if elec.get('semaforo'):
+                    comp_reg = elec.get('comparacion_regional', '')
+                    render_semaforo("Infraestructura Electrica", elec['semaforo'], comp_reg)
+
                 col_e1, col_e2, col_e3 = st.columns(3)
                 with col_e1:
-                    render_metric("Clientes", f"{elec['total_clientes']:,}", "conectados")
+                    render_metric("Clientes", f"{elec.get('total_clientes', 0):,}", "conectados")
                 with col_e2:
-                    render_metric("Potencia Total", f"{elec['potencia_total_kw']:,.0f}", "kW")
+                    render_metric("Potencia Total", f"{elec.get('potencia_total_kw', 0):,.0f}", "kW")
                 with col_e3:
-                    render_metric("Pot. Promedio", f"{elec['potencia_promedio_kw']:.1f}", "kW/cliente")
+                    render_metric("Pot. Promedio", f"{elec.get('potencia_promedio_kw', 0):.1f}", "kW/cliente")
 
                 if elec.get('region'):
-                    st.caption(f"Región: {elec['region']}")
+                    st.caption(f"Region: {elec['region']}")
 
-                if elec['empresas']:
-                    st.markdown("##### Distribuidoras Eléctricas")
+                if elec.get('empresas'):
+                    st.markdown("##### Distribuidoras Electricas")
                     emp_df = pd.DataFrame(elec['empresas'])
                     emp_df.columns = ['Empresa', 'Clientes', 'Potencia (kW)']
                     emp_df['Potencia (kW)'] = emp_df['Potencia (kW)'].apply(lambda x: f"{x:,.1f}")
                     st.dataframe(emp_df, use_container_width=True, hide_index=True)
 
-        # ── Tab: Descargas ───────────────────────────────────────────
-        with predial_tabs[3]:
+                if elec.get('distribucion_potencia'):
+                    st.markdown("##### Distribucion de Potencia")
+                    dp = elec['distribucion_potencia']
+                    if isinstance(dp, list):
+                        st.dataframe(pd.DataFrame(dp), use_container_width=True, hide_index=True)
+                    elif isinstance(dp, dict):
+                        for k, v in dp.items():
+                            st.markdown(f"- **{k}:** {v}")
+
+            render_source("Fuente: SEC, CNE - Clientes regulados")
+
+        # -- Tab: Riesgos (NEW) -------------------------------------------
+        with predial_tabs[5]:
+            st.markdown("#### Evaluacion de Riesgos")
+            if riesgos and (riesgos.get('items') or riesgos.get('disponible')):
+                if riesgos.get('texto_analitico'):
+                    st.markdown(riesgos['texto_analitico'])
+                render_alertas(riesgos.get('alertas'))
+
+                if riesgos.get('semaforo'):
+                    render_semaforo("Riesgo General", riesgos['semaforo'],
+                                   riesgos.get('resumen', ''))
+
+                items = riesgos.get('items', [])
+                for item in items:
+                    if isinstance(item, dict):
+                        nombre_r = item.get('nombre', item.get('tipo', ''))
+                        nivel = item.get('nivel', item.get('semaforo', 'amarillo'))
+                        desc = item.get('descripcion', item.get('detalle', ''))
+                        render_semaforo(nombre_r, nivel, desc)
+                    elif isinstance(item, str):
+                        st.markdown(f"- {item}")
+                render_source("Fuente: SERNAGEOMIN, ONEMI, MMA")
+            else:
+                st.info("No hay datos de evaluacion de riesgos disponibles para esta comuna.")
+
+        # -- Tab: Vecinos (NEW) -------------------------------------------
+        with predial_tabs[6]:
+            st.markdown("#### Produccion Vecina")
+            if vecinos and (vecinos.get('comunas') or vecinos.get('disponible')):
+                if vecinos.get('texto_analitico'):
+                    st.markdown(vecinos['texto_analitico'])
+
+                comunas_vec = vecinos.get('comunas', [])
+                for cv in comunas_vec:
+                    if isinstance(cv, dict):
+                        with st.expander(f"**{cv.get('nombre', 'N/D')}** -- {cv.get('distancia', '')}"):
+                            if cv.get('especies'):
+                                st.dataframe(pd.DataFrame(cv['especies']),
+                                             use_container_width=True, hide_index=True)
+                            if cv.get('superficie_total'):
+                                st.markdown(f"Superficie total: **{cv['superficie_total']:,.1f} ha**")
+                    elif isinstance(cv, str):
+                        st.markdown(f"- {cv}")
+
+                # Infraestructura cercana if present
+                if infraestructura and infraestructura.get('items'):
+                    st.markdown("##### Infraestructura Cercana")
+                    for inf_item in infraestructura['items']:
+                        if isinstance(inf_item, dict):
+                            st.markdown(f"- **{inf_item.get('tipo', '')}:** "
+                                        f"{inf_item.get('nombre', '')} "
+                                        f"({inf_item.get('distancia', '')})")
+                        elif isinstance(inf_item, str):
+                            st.markdown(f"- {inf_item}")
+
+                # Recomendaciones
+                if recomendaciones and (recomendaciones.get('items') or recomendaciones.get('checklist')):
+                    st.markdown("##### Checklist de Verificacion")
+                    checks = recomendaciones.get('items', recomendaciones.get('checklist', []))
+                    for ch in checks:
+                        if isinstance(ch, dict):
+                            st.checkbox(ch.get('texto', str(ch)), value=False,
+                                        key=f"check_{ch.get('id', id(ch))}", disabled=True)
+                        elif isinstance(ch, str):
+                            st.markdown(f"- [ ] {ch}")
+
+                render_source("Fuente: Catastro Fruticola CIREN-ODEPA, comunas aledanas")
+            else:
+                st.info("No hay datos de produccion vecina disponibles.")
+
+        # -- Tab: Descargas -----------------------------------------------
+        with predial_tabs[7]:
             st.markdown("#### Descargar Informe Predial")
             col_dl1, col_dl2 = st.columns(2)
 
             with col_dl1:
                 st.markdown("##### PDF Completo")
-                st.caption("Informe profesional con gráficos, tablas, semáforo hídrico y resumen ejecutivo.")
+                st.caption("Informe profesional con graficos, tablas, semaforo hidrico y resumen ejecutivo.")
                 if st.button("Generar PDF Predial", type="primary", key="btn_predial_pdf_tab"):
                     with st.spinner("Generando..."):
                         try:
@@ -1020,26 +1252,26 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
 
             with col_dl2:
                 st.markdown("##### Datos CSV")
-                if prod['disponible'] and prod['especies']:
+                if prod.get('disponible') and prod.get('especies'):
                     csv_esp = pd.DataFrame(prod['especies']).to_csv(index=False).encode('utf-8')
-                    st.download_button("Producción Frutícola (CSV)", data=csv_esp,
+                    st.download_button("Produccion Fruticola (CSV)", data=csv_esp,
                                        file_name=f"produccion_{pr['comuna']}.csv",
                                        mime="text/csv", key="dl_pred_csv1")
-                if agua['disponible'] and agua['por_tipo']:
+                if agua.get('disponible') and agua.get('por_tipo'):
                     csv_agua = pd.DataFrame(agua['por_tipo']).to_csv(index=False).encode('utf-8')
                     st.download_button("Patentes de Agua (CSV)", data=csv_agua,
                                        file_name=f"agua_{pr['comuna']}.csv",
                                        mime="text/csv", key="dl_pred_csv2")
-                if elec['disponible'] and elec['empresas']:
+                if elec.get('disponible') and elec.get('empresas'):
                     csv_elec = pd.DataFrame(elec['empresas']).to_csv(index=False).encode('utf-8')
-                    st.download_button("Infraestructura Eléctrica (CSV)", data=csv_elec,
+                    st.download_button("Infraestructura Electrica (CSV)", data=csv_elec,
                                        file_name=f"electrico_{pr['comuna']}.csv",
                                        mime="text/csv", key="dl_pred_csv3")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# RESULTADOS: INFORME METEOROLÓGICO (debajo del mapa, full width)
-# ══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+# RESULTADOS: INFORME METEOROLOGICO (debajo del mapa, full width)
+# =============================================================================
 if show_meteo and st.session_state.get('processed') and st.session_state.comuna_match is not None:
     nombre_match, info_match, dist_km = st.session_state.comuna_match
 
@@ -1058,52 +1290,46 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
     meses_lbl = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
     st.markdown("---")
-    st.markdown(f"## Informe Agroclimático — {nombre_match}")
+    st.markdown(f"## Informe Agroclimatico -- {nombre_match}")
     if nombre_predio:
         st.caption(f"Predio: {nombre_predio}")
 
-    # ── Métricas ─────────────────────────────────────────────────────────
+    # -- Metricas ---------------------------------------------------------
     mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
     with mc1:
-        render_metric("T.Máx Enero", f"{data_m.iloc[0]['T.MAX']}°C")
+        render_metric("T.Max Enero", f"{data_m.iloc[0]['T.MAX']}C")
     with mc2:
-        render_metric("T.Mín Julio", f"{data_m.iloc[6]['T.MIN']}°C")
+        render_metric("T.Min Julio", f"{data_m.iloc[6]['T.MIN']}C")
     with mc3:
-        render_metric("Días-Grado", f"{int(annual['DIAS GRADO'])}", "base 10°C")
+        render_metric("Dias-Grado", f"{int(annual['DIAS GRADO'])}", "base 10C")
     with mc4:
-        render_metric("Horas Frío", f"{int(annual['HRS.FRIO'])}", "<7°C anual")
+        render_metric("Horas Frio", f"{int(annual['HRS.FRIO'])}", "<7C anual")
     with mc5:
-        render_metric("Winkler", f"{int(winkler)}", "días-grado")
+        render_metric("Winkler", f"{int(winkler)}", "dias-grado")
     with mc6:
-        render_metric("Fototérmico", f"{int(fototermico)}", "índice")
+        render_metric("Fototermico", f"{int(fototermico)}", "indice")
 
     st.markdown("---")
 
-    # ── Tabs ─────────────────────────────────────────────────────────────
+    # -- Tabs (consolidated 6) --------------------------------------------
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     tabs = st.tabs([
-        "Mensual",
-        "Temperaturas",
-        "Hídrico",
-        "Heladas",
-        "DG & Frío",
+        "Resumen",
+        "Clima",
+        "Riesgos",
         "Cultivos",
         "NDVI",
-        "Plagas",
-        "Costos",
-        "Drones",
-        "Solar",
         "Descargas",
     ])
 
-    # ── Tab 1: Tabla mensual ─────────────────────────────────────────────
+    # -- Tab 1: Resumen (Monthly table) -----------------------------------
     with tabs[0]:
-        st.markdown("#### Resumen de Valores Mensuales para Algunos Parámetros Climáticos")
+        st.markdown("#### Resumen de Valores Mensuales para Algunos Parametros Climaticos")
         display_cols = ['MES', 'T.MAX', 'T.MIN', 'T.MED', 'DIAS GRADO',
-                        'DG.ACUM', 'D-cálidos', 'HRS.FRIO', 'HRS.FRES',
+                        'DG.ACUM', 'D-calidos', 'HRS.FRIO', 'HRS.FRES',
                         'R.SOLAR', 'H.RELAT', 'PRECIPIT', 'EVAP.POT',
                         'DEF.HIDR', 'EXC.HIDR', 'IND.HUMED', 'HELADAS']
         st.dataframe(
@@ -1121,44 +1347,46 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
             height=520
         )
         st.caption(
-            "Días-grado acumulados a partir de octubre. Horas frío acumuladas desde mayo. "
-            "Base: T efectivas 10°C, frío 7°C. Heladas: Tmín < 0°C."
+            "Dias-grado acumulados a partir de octubre. Horas frio acumuladas desde mayo. "
+            "Base: T efectivas 10C, frio 7C. Heladas: Tmin < 0C."
         )
 
-    # ── Tab 2: Temperaturas ──────────────────────────────────────────────
+    # -- Tab 2: Clima (Temperatures + Solar + Balance hidrico) ------------
     with tabs[1]:
-        st.markdown("#### Perfil Térmico Mensual")
+        # --- Temperature profile ---
+        st.markdown("#### Perfil Termico Mensual")
         fig, ax = plt.subplots(figsize=(10, 4.5))
         x = range(12)
         ax.fill_between(x, data_m['T.MIN'].values, data_m['T.MAX'].values,
                         alpha=0.15, color='#2E7D32')
         ax.plot(x, data_m['T.MAX'].values, 'o-', color='#D32F2F', lw=2.5,
-                label='T.Máxima', ms=6)
+                label='T.Maxima', ms=6)
         ax.plot(x, data_m['T.MIN'].values, 's-', color='#1565C0', lw=2.5,
-                label='T.Mínima', ms=6)
+                label='T.Minima', ms=6)
         ax.plot(x, data_m['T.MED'].values, '^--', color='#2E7D32', lw=1.5,
                 label='T.Media', ms=5)
         ax.axhline(y=0, color='lightblue', lw=1, ls=':', alpha=0.7)
-        ax.axhline(y=10, color='orange', lw=0.8, ls='--', alpha=0.5, label='Base DG (10°C)')
+        ax.axhline(y=10, color='orange', lw=0.8, ls='--', alpha=0.5, label='Base DG (10C)')
         ax.set_xticks(x)
         ax.set_xticklabels(meses_lbl)
-        ax.set_ylabel('Temperatura (°C)')
+        ax.set_ylabel('Temperatura (C)')
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
-        ax.set_title(f'Perfil Térmico — {nombre_match}', fontsize=13,
+        ax.set_title(f'Perfil Termico -- {nombre_match}', fontsize=13,
                      fontweight='bold', color='#2E7D32')
         st.pyplot(fig)
         plt.close()
 
-        st.markdown("#### Radiación Solar Mensual")
+        # --- Solar radiation ---
+        st.markdown("#### Radiacion Solar Mensual")
         fig2, ax2 = plt.subplots(figsize=(10, 3.5))
         bars = ax2.bar(x, data_m['R.SOLAR'].values, color='#FFD54F',
                        edgecolor='#F57F17', linewidth=0.8)
         ax2.set_xticks(x)
         ax2.set_xticklabels(meses_lbl)
-        ax2.set_ylabel('cal/cm² día')
+        ax2.set_ylabel('cal/cm2 dia')
         ax2.grid(True, alpha=0.3, axis='y')
-        ax2.set_title(f'Radiación Solar — {nombre_match}', fontsize=13,
+        ax2.set_title(f'Radiacion Solar -- {nombre_match}', fontsize=13,
                       fontweight='bold', color='#2E7D32')
         for bar, val in zip(bars, data_m['R.SOLAR'].values):
             ax2.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 5,
@@ -1166,75 +1394,115 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
         st.pyplot(fig2)
         plt.close()
 
-    # ── Tab 3: Balance hídrico ───────────────────────────────────────────
-    with tabs[2]:
-        st.markdown("#### Balance Hídrico Mensual")
+        # --- Solar energy metrics ---
+        st.markdown("#### Disponibilidad de Energia Solar")
+        ghi_monthly = data_m['R.SOLAR'].values
+        ghi_kwh = ghi_monthly * 0.01163
+        ghi_annual = sum(ghi_kwh * [31,28,31,30,31,30,31,31,30,31,30,31])
+
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            render_metric("GHI Anual", f"{ghi_annual:.0f}", "kWh/m2/anio")
+        with col_e2:
+            peak_sun_hours = ghi_annual / 365
+            render_metric("HSP Promedio", f"{peak_sun_hours:.1f}", "kWh/m2/dia")
+        with col_e3:
+            prod_kwp = ghi_annual * 0.80
+            render_metric("Produccion 1 kWp", f"{prod_kwp:.0f}", "kWh/anio")
+
+        st.markdown("##### Irradiacion Solar Mensual (kWh/m2/dia)")
+        fig_sol, ax_sol = plt.subplots(figsize=(10, 4))
+        bars_s = ax_sol.bar(range(12), ghi_kwh, color='#FFD54F', edgecolor='#F57F17', lw=0.8)
+        ax_sol.set_xticks(range(12))
+        ax_sol.set_xticklabels(meses_lbl)
+        ax_sol.set_ylabel('kWh/m2/dia')
+        ax_sol.grid(True, alpha=0.3, axis='y')
+        ax_sol.set_title(f'Irradiacion Global Horizontal -- {nombre_match}',
+                         fontsize=12, fontweight='bold', color='#2E7D32')
+        for bar, val in zip(bars_s, ghi_kwh):
+            ax_sol.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.05,
+                        f'{val:.1f}', ha='center', va='bottom', fontsize=8)
+        st.pyplot(fig_sol)
+        plt.close()
+
+        st.info(
+            "**Nota:** Los valores de produccion asumen un Performance Ratio (PR) del 80%, "
+            "tipico para instalaciones bien dimensionadas en Chile central. "
+            "El recurso solar en esta ubicacion es "
+            + ("**excelente**" if ghi_annual > 1800 else "**bueno**" if ghi_annual > 1500 else "**moderado**")
+            + f" ({ghi_annual:.0f} kWh/m2/anio)."
+        )
+
+        # --- Balance hidrico ---
+        st.markdown("#### Balance Hidrico Mensual")
         fig, ax = plt.subplots(figsize=(10, 5))
-        x = np.arange(12)
+        x_bh = np.arange(12)
         width = 0.35
-        ax.bar(x - width/2, data_m['EVAP.POT'].values, width, label='ETP (mm)',
+        ax.bar(x_bh - width/2, data_m['EVAP.POT'].values, width, label='ETP (mm)',
                color='#FF8A65', edgecolor='#E64A19', linewidth=0.5)
-        ax.bar(x + width/2, data_m['PRECIPIT'].values, width, label='Precipitación (mm)',
+        ax.bar(x_bh + width/2, data_m['PRECIPIT'].values, width, label='Precipitacion (mm)',
                color='#4FC3F7', edgecolor='#0277BD', linewidth=0.5)
-        ax.set_xticks(x)
+        ax.set_xticks(x_bh)
         ax.set_xticklabels(meses_lbl)
         ax.set_ylabel('mm/mes')
         ax.legend(fontsize=10)
         ax.grid(True, alpha=0.3, axis='y')
-        ax.set_title(f'Balance Hídrico — {nombre_match}', fontsize=13,
+        ax.set_title(f'Balance Hidrico -- {nombre_match}', fontsize=13,
                      fontweight='bold', color='#2E7D32')
         st.pyplot(fig)
         plt.close()
 
-        st.markdown("#### Índice de Humedad Mensual (PP/ETP)")
+        st.markdown("#### Indice de Humedad Mensual (PP/ETP)")
         fig3, ax3 = plt.subplots(figsize=(10, 3.5))
         vals = data_m['IND.HUMED'].values
         colors_ih = ['#4FC3F7' if v >= 1 else '#FF8A65' if v < 0.5 else '#FFD54F' for v in vals]
-        ax3.bar(x, vals, color=colors_ih, edgecolor='gray', linewidth=0.5)
+        ax3.bar(x_bh, vals, color=colors_ih, edgecolor='gray', linewidth=0.5)
         ax3.axhline(y=1.0, color='blue', ls='--', lw=1, alpha=0.5, label='PP = ETP')
         ax3.axhline(y=0.5, color='red', ls='--', lw=1, alpha=0.5, label='Necesita riego')
-        ax3.set_xticks(x)
+        ax3.set_xticks(x_bh)
         ax3.set_xticklabels(meses_lbl)
         ax3.set_ylabel('PP / ETP')
         ax3.legend(fontsize=9)
         ax3.grid(True, alpha=0.3, axis='y')
-        ax3.set_title(f'Índice de Humedad — {nombre_match}', fontsize=13,
+        ax3.set_title(f'Indice de Humedad -- {nombre_match}', fontsize=13,
                       fontweight='bold', color='#2E7D32')
         st.pyplot(fig3)
         plt.close()
 
-    # ── Tab 4: Días cálidos y heladas ────────────────────────────────────
-    with tabs[3]:
+    # -- Tab 3: Riesgos (Heladas + DG & Frio) ----------------------------
+    with tabs[2]:
+        # --- Heladas ---
         col_dc, col_hel = st.columns(2)
         with col_dc:
-            st.markdown("#### Días Cálidos por Umbral")
+            st.markdown("#### Dias Calidos por Umbral")
             st.dataframe(dc_df, use_container_width=True, hide_index=True)
         with col_hel:
             st.markdown("#### Heladas por Intensidad")
             st.dataframe(hel_df, use_container_width=True, hide_index=True)
 
-        st.markdown("#### Distribución de Heladas por Mes")
+        st.markdown("#### Distribucion de Heladas por Mes")
         fig, ax = plt.subplots(figsize=(10, 4))
-        hel_0 = hel_df[hel_df['UMBRAL'] == '0 °C']
+        hel_0 = hel_df[hel_df['UMBRAL'] == '0 C']
         if len(hel_0) > 0:
             month_cols = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
                           'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
-            vals = [hel_0.iloc[0].get(m, 0) for m in month_cols]
-            ax.bar(range(12), vals, color='#90CAF9', edgecolor='#1565C0')
+            vals_h = [hel_0.iloc[0].get(m_, 0) for m_ in month_cols]
+            ax.bar(range(12), vals_h, color='#90CAF9', edgecolor='#1565C0')
             ax.set_xticks(range(12))
             ax.set_xticklabels(meses_lbl)
-            ax.set_ylabel('Días con helada')
-            ax.set_title(f'Heladas (T<0°C) por mes — {nombre_match}', fontsize=12,
+            ax.set_ylabel('Dias con helada')
+            ax.set_title(f'Heladas (T<0C) por mes -- {nombre_match}', fontsize=12,
                          fontweight='bold', color='#2E7D32')
             ax.grid(True, alpha=0.3, axis='y')
         st.pyplot(fig)
         plt.close()
 
-    # ── Tab 5: Días-grado y frío ─────────────────────────────────────────
-    with tabs[4]:
+        st.markdown("---")
+
+        # --- Dias-grado y frio ---
         col_dg, col_hf = st.columns(2)
         with col_dg:
-            st.markdown("#### Días-Grado Acumulados (Oct→Sep)")
+            st.markdown("#### Dias-Grado Acumulados (Oct->Sep)")
             fig, ax = plt.subplots(figsize=(6, 4))
             order = [9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8]
             labels_dg = ['O', 'N', 'D', 'E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S']
@@ -1250,25 +1518,25 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
             plt.close()
 
         with col_hf:
-            st.markdown("#### Horas de Frío y Frescor")
+            st.markdown("#### Horas de Frio y Frescor")
             fig, ax = plt.subplots(figsize=(6, 4))
             ax.bar(range(12), data_m['HRS.FRES'].values, color='#90CAF9',
-                   alpha=0.6, label='Frescor (<10°C)')
+                   alpha=0.6, label='Frescor (<10C)')
             ax.bar(range(12), data_m['HRS.FRIO'].values, color='#42A5F5',
-                   label='Frío (<7°C)')
+                   label='Frio (<7C)')
             ax.set_xticks(range(12))
             ax.set_xticklabels(meses_lbl)
             ax.set_ylabel('Horas')
             ax.legend(fontsize=8)
             ax.grid(True, alpha=0.3, axis='y')
-            ax.set_title(f'Total: {int(annual["HRS.FRIO"])} hrs frío', fontsize=11,
+            ax.set_title(f'Total: {int(annual["HRS.FRIO"])} hrs frio', fontsize=11,
                          fontweight='bold')
             st.pyplot(fig)
             plt.close()
 
-    # ── Tab 6: Aptitud cultivos ──────────────────────────────────────────
-    with tabs[5]:
-        st.markdown("#### Índices Bioclimáticos por Especie")
+    # -- Tab 4: Cultivos (Bioclimatico + Plagas + Costos) -----------------
+    with tabs[3]:
+        st.markdown("#### Indices Bioclimaticos por Especie")
         for esp_key in bio_tables:
             nombre_esp = ESPECIES[esp_key]['nombre']
             with st.expander(f"**{nombre_esp}**", expanded=True):
@@ -1276,7 +1544,7 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                 st.dataframe(bio_df, use_container_width=True, hide_index=True)
 
                 if esp_key in analisis_texts:
-                    st.markdown("**Diagnóstico:**")
+                    st.markdown("**Diagnostico:**")
                     for line in analisis_texts[esp_key].split('\n'):
                         if line.strip():
                             if 'bajo riesgo' in line.lower() or 'adecuad' in line.lower():
@@ -1288,17 +1556,119 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                             else:
                                 st.markdown(f"- {line.strip()}")
 
-    # ── Tab 7: NDVI Satelital (Google Earth Engine) ────────────────────
-    with tabs[6]:
-        st.markdown("#### Índice de Vegetación NDVI — Google Earth Engine")
+        # --- Fitosanidad (sub-expander within Cultivos) ---
+        st.markdown("---")
+        st.markdown("#### Fitosanidad -- Enfermedades y Plagas")
+        st.caption("Base de datos curada de principales problemas fitosanitarios "
+                   "para las especies evaluadas. Fuentes: SAG, INIA, CIREN.")
+
+        for esp_key in bio_tables:
+            if esp_key not in PLAGAS_ENFERMEDADES:
+                continue
+            nombre_esp = ESPECIES[esp_key]['nombre']
+            pe = PLAGAS_ENFERMEDADES[esp_key]
+
+            with st.expander(f"**{nombre_esp} -- Fitosanidad**", expanded=False):
+                st.markdown("##### Enfermedades")
+                for enf in pe.get('enfermedades', []):
+                    st.markdown(f"**{enf['nombre']}** -- *{enf['agente']}*")
+                    st.markdown(f"- Sintomas: {enf['sintomas']}")
+                    st.markdown(f"- Epoca de riesgo: {enf['epoca_riesgo']}")
+                    st.markdown(f"- Control: {enf['control']}")
+                    st.markdown("---")
+
+                st.markdown("##### Plagas")
+                for pla in pe.get('plagas', []):
+                    st.markdown(f"**{pla['nombre']}** -- *{pla['tipo']}*")
+                    st.markdown(f"- Dano: {pla['daño']}")
+                    st.markdown(f"- Epoca: {pla['epoca']}")
+                    st.markdown(f"- Control: {pla['control']}")
+                    st.markdown("---")
+
+                if esp_key in CALENDARIO_FITOSANITARIO:
+                    st.markdown("##### Calendario Fitosanitario Mensual")
+                    cal = CALENDARIO_FITOSANITARIO[esp_key]
+                    for mes_num in range(1, 13):
+                        if mes_num in cal and cal[mes_num]:
+                            st.markdown(f"- {cal[mes_num]}")
+
+        # --- Costos & Fertilizacion (sub-expander within Cultivos) ---
+        st.markdown("---")
+        st.markdown("#### Costos por Hectarea y Plan de Fertilizacion")
+        st.caption("Valores referenciales en USD para zona central de Chile. "
+                   "Fuentes: ODEPA, FIA, consultoras agricolas.")
+
+        # Tabla comparativa de costos
+        st.markdown("##### Comparativa de Costos e Ingresos")
+        cost_rows = []
+        for esp_key in bio_tables:
+            if esp_key not in COSTOS_HECTAREA:
+                continue
+            c = COSTOS_HECTAREA[esp_key]
+            cost_rows.append({
+                'Especie': ESPECIES[esp_key]['nombre'],
+                'Establecimiento (USD/ha)': f"${c['establecimiento_usd_ha']:,}",
+                'Mantencion anual (USD/ha)': f"${c['mantencion_anual_usd_ha']:,}",
+                'Rendimiento (ton/ha)': c['rendimiento_ton_ha'],
+                'Precio FOB (USD/kg)': f"${c['precio_fob_usd_kg']:.2f}",
+                'Ingreso bruto (USD/ha)': f"${c['ingreso_bruto_usd_ha']:,}",
+                'Margen est. (%)': c['margen_estimado_pct'],
+                'Anios hasta prod.': c['años_hasta_produccion'],
+            })
+        if cost_rows:
+            st.dataframe(pd.DataFrame(cost_rows), use_container_width=True, hide_index=True)
+
+        for esp_key in bio_tables:
+            if esp_key not in COSTOS_HECTAREA:
+                continue
+            nombre_esp = ESPECIES[esp_key]['nombre']
+            c = COSTOS_HECTAREA[esp_key]
+
+            with st.expander(f"**{nombre_esp}** -- Detalle Costos", expanded=False):
+                col_c1, col_c2 = st.columns(2)
+                with col_c1:
+                    st.markdown("**Inversion y retorno**")
+                    st.markdown(f"- Establecimiento: **${c['establecimiento_usd_ha']:,}/ha**")
+                    st.markdown(f"- Mantencion anual: **${c['mantencion_anual_usd_ha']:,}/ha**")
+                    st.markdown(f"- Vida util: {c['vida_util_años']} anios")
+                    st.markdown(f"- Anios hasta produccion: {c['años_hasta_produccion']}")
+                    margen_usd = int(c['ingreso_bruto_usd_ha'] * c['margen_estimado_pct'] / 100)
+                    st.markdown(f"- Margen neto estimado: **${margen_usd:,}/ha/anio**")
+                with col_c2:
+                    st.markdown("**Mercado**")
+                    st.markdown(f"- Rendimiento: {c['rendimiento_ton_ha']} ton/ha")
+                    st.markdown(f"- Precio FOB: ${c['precio_fob_usd_kg']:.2f}/kg")
+                    st.markdown(f"- Ingreso bruto: **${c['ingreso_bruto_usd_ha']:,}/ha**")
+                st.markdown(f"*{c['notas']}*")
+
+                if esp_key in FERTILIZACION:
+                    st.markdown("---")
+                    st.markdown("**Plan de Fertilizacion**")
+                    fert = FERTILIZACION[esp_key]
+                    if 'npk_anual' in fert:
+                        npk = fert['npk_anual']
+                        st.markdown(f"Dosis anual (kg/ha): **N** {npk.get('N','-')} - "
+                                    f"**P2O5** {npk.get('P2O5','-')} - **K2O** {npk.get('K2O','-')}")
+                    if 'microelementos' in fert:
+                        st.markdown(f"Microelementos clave: {', '.join(fert['microelementos'])}")
+                    if 'costo_estimado_usd_ha' in fert:
+                        st.markdown(f"Costo estimado fertilizacion: **${fert['costo_estimado_usd_ha']:,}/ha/anio**")
+                    if 'programa_mensual' in fert:
+                        st.markdown("**Programa mensual:**")
+                        for mes_info in fert['programa_mensual']:
+                            st.markdown(f"  - {mes_info}")
+
+    # -- Tab 5: NDVI Satelital (Google Earth Engine) ----------------------
+    with tabs[4]:
+        st.markdown("#### Indice de Vegetacion NDVI -- Google Earth Engine")
         st.caption(
-            "Análisis de vegetación mediante Sentinel-2 (banda NIR/Roja). "
-            "NDVI varía de 0 (suelo desnudo) a 1 (vegetación densa)."
+            "Analisis de vegetacion mediante Sentinel-2 (banda NIR/Roja). "
+            "NDVI varia de 0 (suelo desnudo) a 1 (vegetacion densa)."
         )
 
         if not GEE_AVAILABLE:
-            st.warning("Google Earth Engine no está configurado en este servidor. "
-                       "El análisis NDVI está disponible solo en la versión local.")
+            st.warning("Google Earth Engine no esta configurado en este servidor. "
+                       "El analisis NDVI esta disponible solo en la version local.")
         else:
 
             pin_lat = st.session_state.pin_lat or info_match['lat']
@@ -1306,9 +1676,9 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
 
             col_ndvi_cfg, col_ndvi_res = st.columns([1, 2])
             with col_ndvi_cfg:
-                ndvi_start = st.number_input("Año inicio NDVI", 2017, 2025, 2019, key="ndvi_y0")
-                ndvi_end = st.number_input("Año fin NDVI", 2017, 2025, 2025, key="ndvi_y1")
-                ndvi_radius = st.slider("Radio de análisis (m)", 100, 2000, 500, 100, key="ndvi_r")
+                ndvi_start = st.number_input("Anio inicio NDVI", 2017, 2025, 2019, key="ndvi_y0")
+                ndvi_end = st.number_input("Anio fin NDVI", 2017, 2025, 2025, key="ndvi_y1")
+                ndvi_radius = st.slider("Radio de analisis (m)", 100, 2000, 500, 100, key="ndvi_r")
                 btn_ndvi = st.button("Consultar NDVI", type="primary", key="btn_ndvi")
 
             if btn_ndvi:
@@ -1335,12 +1705,12 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                     if len(valid) > 0:
                         latest = valid.iloc[-1]
                         st.markdown(
-                            f"**Último NDVI:** {latest['ndvi_mean']:.3f} "
-                            f"({classify_land_use(latest['ndvi_mean'])}) — "
+                            f"**Ultimo NDVI:** {latest['ndvi_mean']:.3f} "
+                            f"({classify_land_use(latest['ndvi_mean'])}) -- "
                             f"{latest['date'].strftime('%b %Y')}"
                         )
 
-                # Gráfico de serie temporal
+                # Grafico de serie temporal
                 st.markdown("##### Serie Temporal NDVI mensual")
                 valid = ts_ndvi.dropna(subset=['ndvi_mean'])
                 if len(valid) > 0:
@@ -1354,28 +1724,28 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                     ax_ndvi.set_ylim(0, 1)
                     ax_ndvi.legend(fontsize=8)
                     ax_ndvi.grid(True, alpha=0.3)
-                    ax_ndvi.set_title(f'NDVI — {nombre_match} ({pin_lat:.4f}, {pin_lon:.4f})',
+                    ax_ndvi.set_title(f'NDVI -- {nombre_match} ({pin_lat:.4f}, {pin_lon:.4f})',
                                       fontsize=12, fontweight='bold', color='#2E7D32')
                     st.pyplot(fig_ndvi)
                     plt.close()
                 else:
-                    st.warning("No se obtuvieron datos NDVI válidos para el período seleccionado.")
+                    st.warning("No se obtuvieron datos NDVI validos para el periodo seleccionado.")
 
                 # Resumen anual
-                st.markdown("##### Resumen Anual de Vegetación")
+                st.markdown("##### Resumen Anual de Vegetacion")
                 if annual_ndvi is not None and len(annual_ndvi) > 0:
                     st.dataframe(
                         annual_ndvi.rename(columns={
-                            'year': 'Año', 'ndvi_jan': 'NDVI Ene (verano)',
+                            'year': 'Anio', 'ndvi_jan': 'NDVI Ene (verano)',
                             'ndvi_jul': 'NDVI Jul (invierno)',
                             'ndvi_annual_mean': 'NDVI Promedio',
-                            'vegetation_status': 'Estado vegetación',
+                            'vegetation_status': 'Estado vegetacion',
                         }),
                         use_container_width=True, hide_index=True,
                     )
 
                 # Mapa NDVI overlay
-                st.markdown("##### Mapa NDVI (año más reciente)")
+                st.markdown("##### Mapa NDVI (anio mas reciente)")
                 try:
                     tile_url = get_ndvi_map_url(pin_lat, pin_lon, year=int(ndvi_end))
                     if tile_url:
@@ -1395,215 +1765,18 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                         folium.LayerControl().add_to(ndvi_map)
                         st_folium(ndvi_map, width=None, height=450, key="ndvi_map", returned_objects=[])
                     else:
-                        st.info("No se pudo generar el overlay NDVI. Intente con otro año.")
+                        st.info("No se pudo generar el overlay NDVI. Intente con otro anio.")
                 except Exception as exc:
                     st.warning(f"Mapa NDVI no disponible: {exc}")
 
-    # ── Tab 8: Fitosanidad ──────────────────────────────────────────────
-    with tabs[7]:
-        st.markdown("#### Fitosanidad — Enfermedades y Plagas")
-        st.caption("Base de datos curada de principales problemas fitosanitarios "
-                   "para las especies evaluadas. Fuentes: SAG, INIA, CIREN.")
-
-        for esp_key in bio_tables:
-            if esp_key not in PLAGAS_ENFERMEDADES:
-                continue
-            nombre_esp = ESPECIES[esp_key]['nombre']
-            pe = PLAGAS_ENFERMEDADES[esp_key]
-
-            with st.expander(f"**{nombre_esp}**", expanded=False):
-                st.markdown("##### Enfermedades")
-                for enf in pe.get('enfermedades', []):
-                    st.markdown(f"**{enf['nombre']}** — *{enf['agente']}*")
-                    st.markdown(f"- Síntomas: {enf['sintomas']}")
-                    st.markdown(f"- Época de riesgo: {enf['epoca_riesgo']}")
-                    st.markdown(f"- Control: {enf['control']}")
-                    st.markdown("---")
-
-                st.markdown("##### Plagas")
-                for pla in pe.get('plagas', []):
-                    st.markdown(f"**{pla['nombre']}** — *{pla['tipo']}*")
-                    st.markdown(f"- Daño: {pla['daño']}")
-                    st.markdown(f"- Época: {pla['epoca']}")
-                    st.markdown(f"- Control: {pla['control']}")
-                    st.markdown("---")
-
-                # Calendario fitosanitario si existe
-                if esp_key in CALENDARIO_FITOSANITARIO:
-                    st.markdown("##### Calendario Fitosanitario Mensual")
-                    cal = CALENDARIO_FITOSANITARIO[esp_key]
-                    for mes_num in range(1, 13):
-                        if mes_num in cal and cal[mes_num]:
-                            st.markdown(f"- {cal[mes_num]}")
-
-    # ── Tab 9: Costos & Fertilización ────────────────────────────────────
-    with tabs[8]:
-        st.markdown("#### Costos por Hectárea y Plan de Fertilización")
-        st.caption("Valores referenciales en USD para zona central de Chile. "
-                   "Fuentes: ODEPA, FIA, consultoras agrícolas.")
-
-        # Tabla comparativa de costos
-        st.markdown("##### Comparativa de Costos e Ingresos")
-        cost_rows = []
-        for esp_key in bio_tables:
-            if esp_key not in COSTOS_HECTAREA:
-                continue
-            c = COSTOS_HECTAREA[esp_key]
-            cost_rows.append({
-                'Especie': ESPECIES[esp_key]['nombre'],
-                'Establecimiento (USD/ha)': f"${c['establecimiento_usd_ha']:,}",
-                'Mantención anual (USD/ha)': f"${c['mantencion_anual_usd_ha']:,}",
-                'Rendimiento (ton/ha)': c['rendimiento_ton_ha'],
-                'Precio FOB (USD/kg)': f"${c['precio_fob_usd_kg']:.2f}",
-                'Ingreso bruto (USD/ha)': f"${c['ingreso_bruto_usd_ha']:,}",
-                'Margen est. (%)': c['margen_estimado_pct'],
-                'Años hasta prod.': c['años_hasta_produccion'],
-            })
-        if cost_rows:
-            st.dataframe(pd.DataFrame(cost_rows), use_container_width=True, hide_index=True)
-
-        # Detalle por especie con fertilización
-        for esp_key in bio_tables:
-            if esp_key not in COSTOS_HECTAREA:
-                continue
-            nombre_esp = ESPECIES[esp_key]['nombre']
-            c = COSTOS_HECTAREA[esp_key]
-
-            with st.expander(f"**{nombre_esp}** — Detalle", expanded=False):
-                col_c1, col_c2 = st.columns(2)
-                with col_c1:
-                    st.markdown("**Inversión y retorno**")
-                    st.markdown(f"- Establecimiento: **${c['establecimiento_usd_ha']:,}/ha**")
-                    st.markdown(f"- Mantención anual: **${c['mantencion_anual_usd_ha']:,}/ha**")
-                    st.markdown(f"- Vida útil: {c['vida_util_años']} años")
-                    st.markdown(f"- Años hasta producción: {c['años_hasta_produccion']}")
-                    margen_usd = int(c['ingreso_bruto_usd_ha'] * c['margen_estimado_pct'] / 100)
-                    st.markdown(f"- Margen neto estimado: **${margen_usd:,}/ha/año**")
-                with col_c2:
-                    st.markdown("**Mercado**")
-                    st.markdown(f"- Rendimiento: {c['rendimiento_ton_ha']} ton/ha")
-                    st.markdown(f"- Precio FOB: ${c['precio_fob_usd_kg']:.2f}/kg")
-                    st.markdown(f"- Ingreso bruto: **${c['ingreso_bruto_usd_ha']:,}/ha**")
-                st.markdown(f"*{c['notas']}*")
-
-                # Fertilización
-                if esp_key in FERTILIZACION:
-                    st.markdown("---")
-                    st.markdown("**Plan de Fertilización**")
-                    fert = FERTILIZACION[esp_key]
-                    if 'npk_anual' in fert:
-                        npk = fert['npk_anual']
-                        st.markdown(f"Dosis anual (kg/ha): **N** {npk.get('N','-')} · "
-                                    f"**P2O5** {npk.get('P2O5','-')} · **K2O** {npk.get('K2O','-')}")
-                    if 'microelementos' in fert:
-                        st.markdown(f"Microelementos clave: {', '.join(fert['microelementos'])}")
-                    if 'costo_estimado_usd_ha' in fert:
-                        st.markdown(f"Costo estimado fertilización: **${fert['costo_estimado_usd_ha']:,}/ha/año**")
-                    if 'programa_mensual' in fert:
-                        st.markdown("**Programa mensual:**")
-                        for mes_info in fert['programa_mensual']:
-                            st.markdown(f"  - {mes_info}")
-
-    # ── Tab 10: Drones ──────────────────────────────────────────────────
-    with tabs[9]:
-        st.markdown("#### Tecnología de Drones en Fruticultura")
-        st.caption("Información sobre aplicaciones, equipos y normativa para drones agrícolas en Chile.")
-
-        st.markdown("##### Aplicaciones en Agricultura")
-        for app in DRONES_INFO['aplicaciones']:
-            with st.expander(f"**{app['nombre']}** — ~USD {app['costo_referencial_usd_ha']}/ha"):
-                st.markdown(app['descripcion'])
-                st.markdown(f"**Beneficio:** {app['beneficio']}")
-
-        st.markdown("---")
-        col_v, col_l = st.columns(2)
-        with col_v:
-            st.markdown("##### Ventajas")
-            for v in DRONES_INFO['ventajas']:
-                st.markdown(f"- {v}")
-        with col_l:
-            st.markdown("##### Limitaciones")
-            for l in DRONES_INFO['limitaciones']:
-                st.markdown(f"- {l}")
-
-        st.markdown("---")
-        st.markdown("##### Equipos Recomendados")
-        for eq in DRONES_INFO['equipos_recomendados']:
-            with st.expander(f"**{eq['modelo']}** — {eq['uso']}"):
-                st.markdown(f"- **Capacidad:** {eq['capacidad']}")
-                st.markdown(f"- **Precio referencial:** {eq['precio_referencial']}")
-                st.markdown(f"- **Características:** {eq['caracteristicas']}")
-
-        st.markdown("---")
-        st.markdown("##### Normativa en Chile (DGAC / SAG)")
-        st.markdown(DRONES_INFO['normativa_chile'])
-
-    # ── Tab 11: Energía Solar ────────────────────────────────────────────
-    with tabs[10]:
-        st.markdown("#### Disponibilidad de Energía Solar")
-        st.caption("Potencial fotovoltaico estimado a partir de datos de irradiación GHI (PVsyst / Meteonorm 8.2).")
-
-        # Calcular energía solar desde datos mensuales
-        ghi_monthly = data_m['R.SOLAR'].values  # cal/cm2/día
-        # Convertir cal/cm2/día → kWh/m2/día (1 cal/cm2 = 0.01163 kWh/m2)
-        ghi_kwh = ghi_monthly * 0.01163
-        ghi_annual = sum(ghi_kwh * [31,28,31,30,31,30,31,31,30,31,30,31])
-
-        col_e1, col_e2, col_e3 = st.columns(3)
-        with col_e1:
-            render_metric("GHI Anual", f"{ghi_annual:.0f}", "kWh/m2/año")
-        with col_e2:
-            # Factor de planta estimado (GHI / 8760 * eficiencia)
-            peak_sun_hours = ghi_annual / 365
-            render_metric("HSP Promedio", f"{peak_sun_hours:.1f}", "kWh/m2/día")
-        with col_e3:
-            # Producción estimada 1 kWp: GHI * 0.80 (PR)
-            prod_kwp = ghi_annual * 0.80
-            render_metric("Producción 1 kWp", f"{prod_kwp:.0f}", "kWh/año")
-
-        st.markdown("##### Irradiación Solar Mensual (kWh/m2/día)")
-        fig_sol, ax_sol = plt.subplots(figsize=(10, 4))
-        bars_s = ax_sol.bar(range(12), ghi_kwh, color='#FFD54F', edgecolor='#F57F17', lw=0.8)
-        ax_sol.set_xticks(range(12))
-        ax_sol.set_xticklabels(meses_lbl)
-        ax_sol.set_ylabel('kWh/m2/día')
-        ax_sol.grid(True, alpha=0.3, axis='y')
-        ax_sol.set_title(f'Irradiación Global Horizontal — {nombre_match}',
-                         fontsize=12, fontweight='bold', color='#2E7D32')
-        for bar, val in zip(bars_s, ghi_kwh):
-            ax_sol.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.05,
-                        f'{val:.1f}', ha='center', va='bottom', fontsize=8)
-        st.pyplot(fig_sol)
-        plt.close()
-
-        st.markdown("##### Estimaciones para Bombeo Solar y Riego")
-        st.markdown(f"""
-        | Parámetro | Valor |
-        |---|---|
-        | **GHI anual** | {ghi_annual:.0f} kWh/m2/año |
-        | **Horas sol pico promedio** | {peak_sun_hours:.1f} h/día |
-        | **Producción 1 kWp (PR=80%)** | {prod_kwp:.0f} kWh/año |
-        | **Sistema 5 kWp** | {prod_kwp*5:.0f} kWh/año |
-        | **Sistema 10 kWp** | {prod_kwp*10:.0f} kWh/año |
-        | **Bomba 1 HP solar** | ~{peak_sun_hours*0.75*365:.0f} kWh/año (~{peak_sun_hours*0.75*365/0.746:.0f} m3/año a 30m) |
-        """)
-
-        st.info(
-            "**Nota:** Los valores de producción asumen un Performance Ratio (PR) del 80%, "
-            "típico para instalaciones bien dimensionadas en Chile central. "
-            "El recurso solar en esta ubicación es "
-            + ("**excelente**" if ghi_annual > 1800 else "**bueno**" if ghi_annual > 1500 else "**moderado**")
-            + f" ({ghi_annual:.0f} kWh/m2/año)."
-        )
-
-    # ── Tab 12: Descargas ────────────────────────────────────────────────
-    with tabs[11]:
+    # -- Tab 6: Descargas (Downloads + Drones info) -----------------------
+    with tabs[5]:
         st.markdown("#### Descargar Informe y Datos")
         col_pdf, col_csv = st.columns(2)
 
         with col_pdf:
             st.markdown("##### Informe PDF")
-            st.caption("PDF completo estilo Santibáñez con tablas, gráficos y diagnóstico por cultivo.")
+            st.caption("PDF completo estilo Santibanez con tablas, graficos y diagnostico por cultivo.")
 
             if st.button("Generar PDF", type="primary", key="btn_pdf"):
                 with st.spinner("Generando informe PDF..."):
@@ -1644,7 +1817,7 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
             )
             csv_dc = dc_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                "Días Cálidos (CSV)", data=csv_dc,
+                "Dias Calidos (CSV)", data=csv_dc,
                 file_name=f"dias_calidos_{nombre_match}.csv",
                 mime="text/csv", key="dl_csv_2"
             )
@@ -1663,13 +1836,65 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                     mime="text/csv", key=f"dl_bio_{i}"
                 )
 
+        # --- Drones info (merged into Descargas) ---
+        st.markdown("---")
+        st.markdown("#### Tecnologia de Drones en Fruticultura")
+        st.caption("Informacion sobre aplicaciones, equipos y normativa para drones agricolas en Chile.")
 
-# ── Footer ───────────────────────────────────────────────────────────────────
+        st.markdown("##### Aplicaciones en Agricultura")
+        for app in DRONES_INFO['aplicaciones']:
+            with st.expander(f"**{app['nombre']}** -- ~USD {app['costo_referencial_usd_ha']}/ha"):
+                st.markdown(app['descripcion'])
+                st.markdown(f"**Beneficio:** {app['beneficio']}")
+
+        st.markdown("---")
+        col_v, col_l = st.columns(2)
+        with col_v:
+            st.markdown("##### Ventajas")
+            for v in DRONES_INFO['ventajas']:
+                st.markdown(f"- {v}")
+        with col_l:
+            st.markdown("##### Limitaciones")
+            for lim in DRONES_INFO['limitaciones']:
+                st.markdown(f"- {lim}")
+
+        st.markdown("---")
+        st.markdown("##### Equipos Recomendados")
+        for eq in DRONES_INFO['equipos_recomendados']:
+            with st.expander(f"**{eq['modelo']}** -- {eq['uso']}"):
+                st.markdown(f"- **Capacidad:** {eq['capacidad']}")
+                st.markdown(f"- **Precio referencial:** {eq['precio_referencial']}")
+                st.markdown(f"- **Caracteristicas:** {eq['caracteristicas']}")
+
+        st.markdown("---")
+        st.markdown("##### Normativa en Chile (DGAC / SAG)")
+        st.markdown(DRONES_INFO['normativa_chile'])
+
+        st.markdown("##### Estimaciones para Bombeo Solar y Riego")
+        # Recalculate solar values for this section
+        _ghi_monthly = data_m['R.SOLAR'].values
+        _ghi_kwh = _ghi_monthly * 0.01163
+        _ghi_annual = sum(_ghi_kwh * [31,28,31,30,31,30,31,31,30,31,30,31])
+        _peak_sun_hours = _ghi_annual / 365
+        _prod_kwp = _ghi_annual * 0.80
+        st.markdown(f"""
+        | Parametro | Valor |
+        |---|---|
+        | **GHI anual** | {_ghi_annual:.0f} kWh/m2/anio |
+        | **Horas sol pico promedio** | {_peak_sun_hours:.1f} h/dia |
+        | **Produccion 1 kWp (PR=80%)** | {_prod_kwp:.0f} kWh/anio |
+        | **Sistema 5 kWp** | {_prod_kwp*5:.0f} kWh/anio |
+        | **Sistema 10 kWp** | {_prod_kwp*10:.0f} kWh/anio |
+        | **Bomba 1 HP solar** | ~{_peak_sun_hours*0.75*365:.0f} kWh/anio (~{_peak_sun_hours*0.75*365/0.746:.0f} m3/anio a 30m) |
+        """)
+
+
+# -- Footer -------------------------------------------------------------------
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #999; font-size: 0.8rem; padding: 0.5rem 0;">
-    Visor Agroclimático v1.0 &nbsp;|&nbsp; Datos: PVsyst / Meteonorm 8.2 (TMY 2010-2019) &nbsp;|&nbsp;
-    Metodología: Fernando Santibáñez, Dr. en Bioclimatología &nbsp;|&nbsp;
+    Visor Agroclimatico v1.1 &nbsp;|&nbsp; Datos: PVsyst / Meteonorm 8.2 (TMY 2010-2019) &nbsp;|&nbsp;
+    Metodologia: Fernando Santibanez, Dr. en Bioclimatologia &nbsp;|&nbsp;
     Motor: 8760 horas de datos horarios
 </div>
 """, unsafe_allow_html=True)
