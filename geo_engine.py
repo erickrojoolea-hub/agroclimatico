@@ -91,6 +91,16 @@ def point_in_polygon(lon: float, lat: float, geometry: dict) -> bool:
 _GEOJSON_CACHE = {}
 
 
+def _fix_encoding(text: str) -> str:
+    """Fix broken UTF-8 encoding (text read as latin-1 instead of utf-8)."""
+    if not text:
+        return text or ""
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return text
+
+
 def _load_geojson(name: str) -> Optional[dict]:
     """Load a GeoJSON file from data/geojson/. Cached after first load."""
     if name in _GEOJSON_CACHE:
@@ -391,14 +401,14 @@ def get_embalses_cercanos(lat: float, lon: float, max_km: float = 100.0,
             if d <= max_km:
                 keys = r.keys()
                 results.append({
-                    "nombre": r["nombre"] or "Sin nombre",
+                    "nombre": _fix_encoding(r["nombre"] or "Sin nombre"),
                     "distancia_km": round(d, 1),
-                    "region": r["region"] or "",
-                    "comuna": (r["comuna"] if "comuna" in keys else "") or "",
-                    "tipo": (r["tipo"] if "tipo" in keys else "") or "",
-                    "estado": (r["estado"] if "estado" in keys else "") or "",
-                    "uso": (r["uso"] if "uso" in keys else "") or "",
-                    "propietario": (r["propietario"] if "propietario" in keys else "") or "",
+                    "region": _fix_encoding(r["region"] or ""),
+                    "comuna": _fix_encoding((r["comuna"] if "comuna" in keys else "") or ""),
+                    "tipo": _fix_encoding((r["tipo"] if "tipo" in keys else "") or ""),
+                    "estado": _fix_encoding((r["estado"] if "estado" in keys else "") or ""),
+                    "uso": _fix_encoding((r["uso"] if "uso" in keys else "") or ""),
+                    "propietario": _fix_encoding((r["propietario"] if "propietario" in keys else "") or ""),
                 })
         results.sort(key=lambda x: x["distancia_km"])
         return results[:top_n]
@@ -436,14 +446,14 @@ def get_estaciones_cercanas(lat: float, lon: float, tipo: str = "fluviometricas"
             if d <= max_km:
                 keys = r.keys()
                 item = {
-                    "nombre": r["nombre"] or "Sin nombre",
+                    "nombre": _fix_encoding(r["nombre"] or "Sin nombre"),
                     "distancia_km": round(d, 1),
-                    "region": (r["region"] if "region" in keys else "") or "",
+                    "region": _fix_encoding((r["region"] if "region" in keys else "") or ""),
                 }
                 if "cuenca" in keys:
-                    item["cuenca"] = r["cuenca"] or ""
+                    item["cuenca"] = _fix_encoding(r["cuenca"] or "")
                 if "comuna" in keys:
-                    item["comuna"] = r["comuna"] or ""
+                    item["comuna"] = _fix_encoding(r["comuna"] or "")
                 if "estado" in keys:
                     item["estado"] = r["estado"] or ""
                 if "ica" in keys:

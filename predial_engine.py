@@ -48,10 +48,74 @@ _DB_FILES = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Alias table: nombres donde la normalizacion de acentos NO basta
+# (cambio de letra real, typos en las bases de datos, etc.)
+_COMUNA_ALIASES = {
+    # Marchigüe (Nominatim/oficial) → Marchihue (catastro/SEC)
+    "marchigue": "marchihue",
+    # Doñihue (correct) → Doñiihue (typo in catastro_fruticola.db)
+    "donihue": "doniihue",
+    "doñihue": "doñiihue",
+}
+
+
 def normalize_comuna(name: str) -> str:
-    """Remove accents and normalize for search."""
+    """Remove accents, dieresis and normalize for search.
+    Uses combining character removal to properly handle ü, ñ, etc.
+    """
+    if not name:
+        return ""
     nfkd = unicodedata.normalize("NFKD", name)
-    return nfkd.encode("ASCII", "ignore").decode("ASCII")
+    # Remove ALL combining marks (accents, dieresis, tilde on ñ, etc.)
+    stripped = "".join(c for c in nfkd if not unicodedata.combining(c))
+    # Fallback: force ASCII for any remaining non-ASCII chars
+    stripped = stripped.encode("ASCII", "ignore").decode("ASCII")
+    return stripped.strip()
+
+
+def _resolve_comuna(name: str) -> str:
+    """Resolve a comuna name through alias table + normalization.
+    Returns the best candidate name for DB lookups.
+    """
+    if not name:
+        return ""
+    # Direct alias (case-insensitive)
+    lower = name.lower().strip()
+    if lower in _COMUNA_ALIASES:
+        return _COMUNA_ALIASES[lower]
+    # Normalize, then check alias
+    norm = normalize_comuna(name).lower()
+    if norm in _COMUNA_ALIASES:
+        return _COMUNA_ALIASES[norm]
+    return normalize_comuna(name)
+
+
+def _fix_encoding(text: str) -> str:
+    """Fix broken UTF-8 encoding (text read as latin-1 instead of utf-8)."""
+    if not text:
+        return text or ""
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return text
+
+
+def _comuna_variants(comuna: str) -> list[str]:
+    """Return ordered unique list of comuna name variants to try in SQL."""
+    norm = normalize_comuna(comuna)
+    resolved = _resolve_comuna(comuna)
+    raw = [
+        comuna, resolved, resolved.title(), resolved.upper(),
+        norm, norm.upper(), norm.title(), norm.lower(),
+        comuna.upper(), comuna.title(), comuna.lower(),
+    ]
+    seen = set()
+    out = []
+    for v in raw:
+        if v and v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
 
 
 def _connect(db_key: str) -> Optional[sqlite3.Connection]:
@@ -82,22 +146,28 @@ def _search_comuna_variants(conn: sqlite3.Connection, col: str, table: str,
                             comuna: str, extra_cols: str = "*",
                             where_extra: str = "",
                             limit: int = 0) -> list:
-    """Try multiple normalizations to find a comuna in a table."""
+    """Try multiple normalizations + alias resolution to find a comuna."""
     norm = normalize_comuna(comuna)
-    variants = [
-        comuna,
-        norm,
-        norm.upper(),
-        norm.title(),
-        norm.lower(),
-        comuna.upper(),
-        comuna.title(),
-        comuna.lower(),
+    resolved = _resolve_comuna(comuna)
+
+    # Build unique ordered list of variants to try
+    raw_variants = [
+        comuna,                   # Original: "Marchigüe"
+        resolved,                 # Alias-resolved: "Marchihue"
+        resolved.title(),         # "Marchihue"
+        resolved.upper(),         # "MARCHIHUE"
+        norm,                     # Normalized: "Marchigue"
+        norm.upper(),             # "MARCHIGUE"
+        norm.title(),             # "Marchigue"
+        norm.lower(),             # "marchigue"
+        comuna.upper(),           # "MARCHIGÜE"
+        comuna.title(),           # "Marchigüe"
+        comuna.lower(),           # "marchigüe"
     ]
     seen = set()
     unique_variants = []
-    for v in variants:
-        if v not in seen:
+    for v in raw_variants:
+        if v and v not in seen:
             seen.add(v)
             unique_variants.append(v)
 
@@ -111,14 +181,26 @@ def _search_comuna_variants(conn: sqlite3.Connection, col: str, table: str,
         if rows:
             return rows
 
-    # Fallback: UPPER comparison with normalized version
-    for v in [norm.upper(), comuna.upper()]:
+    # Fallback: UPPER comparison with all normalized variants
+    for v in [norm.upper(), resolved.upper(), comuna.upper()]:
         sql = f"SELECT {extra_cols} FROM {table} WHERE UPPER({col}) = ?"
         if where_extra:
             sql += f" AND {where_extra}"
         if limit:
             sql += f" LIMIT {limit}"
         rows = conn.execute(sql, (v,)).fetchall()
+        if rows:
+            return rows
+
+    # Last resort: fuzzy LIKE on first 5 normalized chars
+    prefix = norm[:5].upper()
+    if len(prefix) >= 4:
+        sql = f"SELECT {extra_cols} FROM {table} WHERE UPPER({col}) LIKE ?"
+        if where_extra:
+            sql += f" AND {where_extra}"
+        if limit:
+            sql += f" LIMIT {limit}"
+        rows = conn.execute(sql, (f"{prefix}%",)).fetchall()
         if rows:
             return rows
 
@@ -238,7 +320,6 @@ def _get_produccion(comuna: str) -> dict:
             result["provincia"] = geo["provincia"] or ""
 
         # --- Variedades detail from catastro_completo ---
-        norm = normalize_comuna(comuna)
         vars_sql = (
             'SELECT especie, variedad, '
             'SUM(CAST(REPLACE("superficie_(ha)", \',\', \'.\') AS REAL)) as sup, '
@@ -250,7 +331,7 @@ def _get_produccion(comuna: str) -> dict:
             'GROUP BY especie, variedad '
             'ORDER BY sup DESC LIMIT 30'
         )
-        for v in [comuna, norm, norm.upper(), norm.title()]:
+        for v in _comuna_variants(comuna):
             vars_rows = conn.execute(vars_sql, (v,)).fetchall()
             if vars_rows:
                 break
@@ -275,7 +356,7 @@ def _get_produccion(comuna: str) -> dict:
             'FROM catastro_completo WHERE UPPER(comuna) = UPPER(?) '
             'GROUP BY metodo_de_riego ORDER BY sup DESC'
         )
-        for v in [comuna, norm, norm.upper(), norm.title()]:
+        for v in _comuna_variants(comuna):
             riego_rows = conn.execute(riego_sql, (v,)).fetchall()
             if riego_rows:
                 break
@@ -301,7 +382,7 @@ def _get_produccion(comuna: str) -> dict:
             'FROM catastro_completo WHERE UPPER(comuna) = UPPER(?) '
             'GROUP BY tipo_productor ORDER BY ha DESC'
         )
-        for v in [comuna, norm, norm.upper(), norm.title()]:
+        for v in _comuna_variants(comuna):
             tipo_rows = conn.execute(tipo_sql, (v,)).fetchall()
             if tipo_rows:
                 break
@@ -476,8 +557,8 @@ def _get_agua(comuna: str, lat: float = None, lon: float = None) -> dict:
             "FROM patentes WHERE UPPER(comuna) = UPPER(?) "
             "GROUP BY concesion ORDER BY m DESC"
         )
-        norm = normalize_comuna(comuna)
-        for v in [comuna, norm, norm.upper()]:
+        _variants = _comuna_variants(comuna)
+        for v in _variants:
             conc_rows = conn.execute(conc_sql, (v,)).fetchall()
             if conc_rows:
                 break
@@ -500,7 +581,7 @@ def _get_agua(comuna: str, lat: float = None, lon: float = None) -> dict:
             "FROM patentes WHERE UPPER(comuna) = UPPER(?) "
             "GROUP BY tipo_persona"
         )
-        for v in [comuna, norm, norm.upper()]:
+        for v in _variants:
             tipo_rows = conn.execute(tipo_sql, (v,)).fetchall()
             if tipo_rows:
                 break
@@ -520,7 +601,7 @@ def _get_agua(comuna: str, lat: float = None, lon: float = None) -> dict:
             "FROM patentes WHERE UPPER(comuna) = UPPER(?) AND anio_patente IS NOT NULL "
             "GROUP BY anio ORDER BY anio"
         )
-        for v in [comuna, norm, norm.upper()]:
+        for v in _variants:
             anio_rows = conn.execute(anio_sql, (v,)).fetchall()
             if anio_rows:
                 break
@@ -539,7 +620,7 @@ def _get_agua(comuna: str, lat: float = None, lon: float = None) -> dict:
             "AND oficina_cbr IS NOT NULL AND oficina_cbr != '' "
             "GROUP BY oficina_cbr ORDER BY cnt DESC"
         )
-        for v in [comuna, norm, norm.upper()]:
+        for v in _variants:
             cbr_rows = conn.execute(cbr_sql, (v,)).fetchall()
             if cbr_rows:
                 break
@@ -1597,15 +1678,16 @@ def generate_predial_report(comuna: str, lat: float = None,
     uso_suelo = _get_uso_suelo(comuna)
     electrico = _get_electrico(comuna)
 
-    # Determine region/provincia from available sources
+    # Determine region/provincia from available sources.
+    # Try multiple databases to ensure we always find region/provincia,
+    # even when the primary lookup fails due to name mismatch.
     region = (produccion.get("region")
               or agua.get("region", "")
               or "")
     provincia = produccion.get("provincia", "")
 
-    # If we got region from electrico and nowhere else
-    if not region and electrico.get("disponible"):
-        # Try to get from the electrico query context
+    # If region is still empty, try to infer from electrico
+    if not region:
         conn = _connect("electrico")
         if conn:
             row = _search_comuna_single(
@@ -1613,6 +1695,35 @@ def generate_predial_report(comuna: str, lat: float = None,
                 extra_cols="nombre_region")
             if row:
                 region = row["nombre_region"] or ""
+            conn.close()
+
+    # If still empty, try catastro_completo with resolved name
+    if not region:
+        conn = _connect("catastro")
+        if conn:
+            for v in _comuna_variants(comuna):
+                row = conn.execute(
+                    "SELECT DISTINCT region, provincia FROM catastro_completo "
+                    "WHERE UPPER(comuna) = UPPER(?) LIMIT 1", (v,)
+                ).fetchone()
+                if row:
+                    region = row[0] or ""
+                    provincia = row[1] or provincia
+                    break
+            conn.close()
+
+    # If still empty, try DGA resumen
+    if not region:
+        conn = _connect("dga")
+        if conn:
+            for v in _comuna_variants(comuna):
+                row = conn.execute(
+                    "SELECT region FROM resumen_por_comuna "
+                    "WHERE UPPER(comuna) = UPPER(?) LIMIT 1", (v,)
+                ).fetchone()
+                if row:
+                    region = row[0] or ""
+                    break
             conn.close()
 
     # Analisis del sitio (point-specific geospatial)
