@@ -17,10 +17,10 @@ _STATIONS: list = []
 _LOADED = False
 
 # CAMELS-CL como fuente adicional de altitud por cuencas
-_CAMELS_PATH = os.path.join(
-    os.path.dirname(__file__), 'datos_geo', 'CR2',
-    'CAMELS_CL_v202201', 'catchment_attributes.csv'
-)
+_BASE = os.path.dirname(__file__)
+_CAMELS_LOCAL = os.path.join(_BASE, 'data', 'estaciones', 'catchment_attributes.csv')
+_CAMELS_SYMLINK = os.path.join(_BASE, 'datos_geo', 'CR2', 'CAMELS_CL_v202201', 'catchment_attributes.csv')
+_CAMELS_PATH = _CAMELS_LOCAL if os.path.exists(_CAMELS_LOCAL) else _CAMELS_SYMLINK
 
 
 def _haversine(lat1, lon1, lat2, lon2):

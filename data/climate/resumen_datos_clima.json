@@ -1,0 +1,43 @@
+{
+  "fecha_generacion": "2026-04-13T17:10:17.660246",
+  "fuentes": {
+    "precipitacion": {
+      "producto": "WorldClim 2.1",
+      "resolucion": "10 arc-minutes (~18 km)",
+      "periodo_climatologico": "1970-2000",
+      "referencia": "Fick & Hijmans (2017). Int J Climatol, 37(12), 4302-4315",
+      "nota": "Climatología pre-megasequía. Para Chile central actual reducir 20-30%",
+      "n_localidades": 33
+    },
+    "oni_enso": {
+      "fuente": "NOAA CPC",
+      "variable": "Oceanic Niño Index (Niño 3.4 SST anomaly)",
+      "referencia": "Huang et al. (2017). ERSST v5. J Climate, 30, 8179-8205",
+      "ultimo_valor": -0.16,
+      "ultimo_periodo": "JFM 2026",
+      "estado": "Neutro"
+    },
+    "pdo": {
+      "fuente": "NCEI NOAA",
+      "variable": "Pacific Decadal Oscillation",
+      "referencia": "Mantua et al. (1997). Bull AMS, 78, 1069-1079",
+      "ultimo_valor": 99.99,
+      "fase": "Positiva"
+    },
+    "soi": {
+      "fuente": "NOAA CPC",
+      "variable": "Southern Oscillation Index (Tahiti - Darwin SLP)",
+      "referencia": "Trenberth (1984). Mon Wea Rev, 112, 326-332"
+    }
+  },
+  "metodologia_forecast": {
+    "metodo": "Análogos climáticos + regresión",
+    "drivers": [
+      "ENSO (ONI): peso 0.45, correlación histórica r=0.4-0.7",
+      "PDO: peso 0.25, modulación decenal",
+      "SOI: peso 0.30, complementa ONI"
+    ],
+    "advertencia": "Correlación ENSO-precipitación debilitada desde 2000 (Garreaud et al., 2024)",
+    "referencia_principal": "Garreaud et al. (2024). La montaña rusa de las lluvias en Chile central. CR2/U.Chile"
+  }
+}

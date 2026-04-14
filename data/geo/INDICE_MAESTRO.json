@@ -1,0 +1,1580 @@
+{
+  "version": "1.0",
+  "description": "Índice maestro de capas geoespaciales - Apoyo Agro/Forestal Chile",
+  "capas_geojson": [
+    {
+      "archivo": "_geojson/DGA__Acuiferos_y_Vegas_Protegidas__Acuiferos_Protegidos_Vegas_y_Bofedales.geojson",
+      "fuente": "DGA",
+      "features": 216,
+      "campos": [
+        "ID_IDE",
+        "COD_REG",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_ACUIFV",
+        "NOM_VEGA",
+        "RES_DGA_IN",
+        "FUENTE_POL",
+        "RES_DGA_FI",
+        "RES_DGA",
+        "F_RES_DGA",
+        "LINK_DOC",
+        "AREA_KM2"
+      ],
+      "bbox": [
+        -69.56335107899997,
+        -25.002137372999982,
+        -67.00561733699995,
+        -17.699163360999968
+      ],
+      "size_mb": 1.19
+    },
+    {
+      "archivo": "_geojson/DGA__Acuiferos_y_Vegas_Protegidas__Vegas_Protegidas.geojson",
+      "fuente": "DGA",
+      "features": 419,
+      "campos": [
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_REG",
+        "REGION",
+        "COD_PROV",
+        "PROVINCIA",
+        "COD_COM",
+        "COMUNA",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "COD_VEG",
+        "NUM_VEGA",
+        "NOM_VEG",
+        "EXISTENCIA",
+        "ORIGEN",
+        "POSICION",
+        "MAPA",
+        "UTM_ESTE",
+        "UTM_NORTE"
+      ],
+      "bbox": [
+        -69.55449007799996,
+        -24.99164527399995,
+        -67.01732346199998,
+        -17.704321594999954
+      ],
+      "size_mb": 0.28
+    },
+    {
+      "archivo": "_geojson/DGA__Areas_de_Restricci¢n_Zonas_de_Prohibici¢n__Areas_de_Restricci¢n_Zonas_de_Prohibici¢n.geojson",
+      "fuente": "DGA",
+      "features": 233,
+      "campos": [
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "ID_UNICO",
+        "COD_SHAC",
+        "COD_REG",
+        "REGION",
+        "REGIONES",
+        "COD_BNA",
+        "NOM_BNA",
+        "COD_BNA_AC",
+        "NOM_ACUIF",
+        "COD_BNA_SH",
+        "SHAC",
+        "TIPO_LIMIT",
+        "RES_DGA",
+        "F_RES_DGA",
+        "F_TRAZON",
+        "F_PUB_DO",
+        "RESMODIF_1",
+        "PUBMODIF_1",
+        "MOTIV_MOD1",
+        "RESMODIF_2",
+        "PUBMODIF_2",
+        "MOTIV_MOD2",
+        "RESMODIF_3",
+        "PUBMODIF_3",
+        "MOTIV_MOD3",
+        "TIPOESTUDI",
+        "REFERENCIA",
+        "F_UESTUDIO"
+      ],
+      "bbox": [
+        -73.38070600299994,
+        -53.633958796999934,
+        -67.33549048799995,
+        -18.067434551999956
+      ],
+      "size_mb": 8.67
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Escorrentia.geojson",
+      "fuente": "DGA",
+      "features": 138,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -72.63844244599994,
+        -53.36188796699997,
+        -67.00531102199999,
+        -17.64005049999993
+      ],
+      "size_mb": 1.2
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Evaporacion_de_Tanque.geojson",
+      "fuente": "DGA",
+      "features": 126,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -73.34121189799998,
+        -49.120867455999985,
+        -67.84693606199997,
+        -17.852242859999944
+      ],
+      "size_mb": 1.98
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Evapotranspiracion_Real.geojson",
+      "fuente": "DGA",
+      "features": 273,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -75.00002673199998,
+        -55.795542025999964,
+        -66.39205406899995,
+        -17.78405732599998
+      ],
+      "size_mb": 2.88
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Evapotranspiracion_real_zona_riego.geojson",
+      "fuente": "DGA",
+      "features": 32,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM_R",
+        "VALOR_PROM",
+        "AREA_KM2",
+        "PERIMETROK",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -72.51532172999998,
+        -37.26140195299996,
+        -70.51197953499998,
+        -32.14579287799994
+      ],
+      "size_mb": 0.55
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Isotermas.geojson",
+      "fuente": "DGA",
+      "features": 440,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_C"
+      ],
+      "bbox": [
+        -75.68867980999994,
+        -55.446543057999975,
+        -67.04860959099999,
+        -17.633136835999952
+      ],
+      "size_mb": 5.19
+    },
+    {
+      "archivo": "_geojson/DGA__Balance_Hidrico_1987__BH87_Isoyetas.geojson",
+      "fuente": "DGA",
+      "features": 456,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -76.29024099199995,
+        -55.77641426499997,
+        -66.39298352099996,
+        -17.553565317999976
+      ],
+      "size_mb": 4.93
+    },
+    {
+      "archivo": "_geojson/DGA__Cuencas_BNA__Cuencas_BNA.geojson",
+      "fuente": "DGA",
+      "features": 139,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_CUEN",
+        "NOM_CUEN",
+        "COD_REGION",
+        "COD_REG"
+      ],
+      "bbox": [
+        -109.45013214299996,
+        -56.54378842999995,
+        -66.24092822299993,
+        -17.498424411999952
+      ],
+      "size_mb": 9.66
+    },
+    {
+      "archivo": "_geojson/DGA__Declaraci¢n_de_Agotamiento__Declaraci¢n_de_Agotamiento.geojson",
+      "fuente": "DGA",
+      "features": 15,
+      "campos": [
+        "ID_IDE",
+        "COD_REG",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_AGOTA",
+        "NOM_AGOTA",
+        "RES_DGA",
+        "F_RES_DGA",
+        "F_TRAZON",
+        "F_PUB_DO",
+        "OBS_RES_DG",
+        "LINK_DOC",
+        "AREA_KM2"
+      ],
+      "bbox": [
+        -72.38010240699998,
+        -37.65775111299996,
+        -67.83256909299996,
+        -20.84451765599994
+      ],
+      "size_mb": 0.88
+    },
+    {
+      "archivo": "_geojson/DGA__Embalses__Inv_Embalses_DGA_DOH.geojson",
+      "fuente": "DGA",
+      "features": 1367,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_REG",
+        "REGION",
+        "COD_PROV",
+        "PROVINCIA",
+        "COD_COM",
+        "COMUNA",
+        "NOM_EMBALS",
+        "ESTADO",
+        "AÃO_CONTR",
+        "ALTURA_MUR",
+        "COTA",
+        "MXLOCATION",
+        "MXSITEID",
+        "FUENTE_INF",
+        "PROPIETARI",
+        "RUT",
+        "FUENTE_NAT",
+        "USO_EMBALS",
+        "TIPO_EMBAL",
+        "MONITOREO_",
+        "TAMAÃO_EM",
+        "UTM_ESTE",
+        "UTM_NORTE",
+        "LATITUD",
+        "LONGITUD"
+      ],
+      "bbox": [
+        -73.55304870499998,
+        -39.38961596399997,
+        -68.61980491999998,
+        -18.19037387399993
+      ],
+      "size_mb": 1.23
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesCalidadAguas__Calidad_de_Aguas.geojson",
+      "fuente": "DGA",
+      "features": 1435,
+      "campos": [
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "Latitud",
+        "Longitud"
+      ],
+      "bbox": [
+        93993.19509768771,
+        3910089.999999999,
+        617423.9999999987,
+        8031119.011014953
+      ],
+      "size_mb": 0.36
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesFluviometricas__Fluviometricas.geojson",
+      "fuente": "DGA",
+      "features": 543,
+      "campos": [
+        "REGION",
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "ESTE_84",
+        "NORTE_84",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM",
+        "LAT",
+        "LONG"
+      ],
+      "bbox": [
+        101148.88282629859,
+        3910090.0,
+        617424.0,
+        8027538.0
+      ],
+      "size_mb": 0.35
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesGlaciologicas__Estaciones_Glaciologicas.geojson",
+      "fuente": "DGA",
+      "features": 31,
+      "campos": [
+        "COD_BNA",
+        "NOMBRE",
+        "UTM_ESTE_W",
+        "UTM_NORTE_",
+        "HUSO",
+        "ALTITUD",
+        "HABILITACI",
+        "HABILITA_1",
+        "ESTADO",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM"
+      ],
+      "bbox": [
+        127120.33449999988,
+        4328427.6534,
+        429200.0,
+        6851957.0
+      ],
+      "size_mb": 0.02
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesMeteorologicas__Meteorologicas.geojson",
+      "fuente": "DGA",
+      "features": 740,
+      "campos": [
+        "REGION",
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "ESTE_84",
+        "NORTE_84",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM"
+      ],
+      "bbox": [
+        -3700248.7840828886,
+        3894234.0,
+        658907.0,
+        8054572.0
+      ],
+      "size_mb": 0.44
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesNivelesLagosEmbalses__Lagos_y_Embalses.geojson",
+      "fuente": "DGA",
+      "features": 72,
+      "campos": [
+        "REGION",
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "ESTE_84",
+        "NORTE_84",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM"
+      ],
+      "bbox": [
+        123348.66713416076,
+        3897541.0,
+        608630.0,
+        8013076.0
+      ],
+      "size_mb": 0.04
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesNivelesPozos__Niveles_de_Pozos.geojson",
+      "fuente": "DGA",
+      "features": 696,
+      "campos": [
+        "REGION",
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "ESTE_84",
+        "NORTE_84",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM",
+        "COD_ACUIF",
+        "Regiones",
+        "Cuenca",
+        "Acuifero",
+        "Sector",
+        "Tipo_Limit",
+        "APR",
+        "Provisiona",
+        "Sobreotorg",
+        "Ley20411",
+        "Res_DGA",
+        "F_RES_DGA",
+        "F_TRAZON",
+        "F_PUB_DO",
+        "aÃ±o",
+        "ResModif_1",
+        "PubModif_1",
+        "ResModif_2",
+        "PubModif_2",
+        "Motivo_Mod",
+        "TipoEstudi",
+        "N_Estudios",
+        "F_Uestudio",
+        "Referencia",
+        "Vol_SUS_m3",
+        "Vol_Prov_m",
+        "a_km2",
+        "Cent_X",
+        "Cent_Y",
+        "Shape_Area"
+      ],
+      "bbox": [
+        131197.59496262122,
+        5402754.870310989,
+        574920.0,
+        7972994.0
+      ],
+      "size_mb": 0.89
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesRutaNieves__Rutas_de_Nieve.geojson",
+      "fuente": "DGA",
+      "features": 16,
+      "campos": [
+        "COD_REG",
+        "COD_BNA",
+        "Nombre",
+        "ESTE_84",
+        "Norte_84",
+        "Altitud"
+      ],
+      "bbox": [
+        285078.1,
+        5885146.8,
+        409545.9,
+        6832957.9
+      ],
+      "size_mb": 0.0
+    },
+    {
+      "archivo": "_geojson/DGA__EstacionesSedimentometricas__Sedimentometricas.geojson",
+      "fuente": "DGA",
+      "features": 76,
+      "campos": [
+        "REGION",
+        "COD_BNA",
+        "NOMBRE",
+        "ESTADO",
+        "ESTE_84",
+        "NORTE_84",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "NOM_CUEN",
+        "NOM_SUBC",
+        "CINE_REG",
+        "COD_REG",
+        "NOM_REG",
+        "CINE_PROV",
+        "COD_PROV",
+        "NOM_PROV",
+        "CINE_COM",
+        "COD_COM",
+        "NOM_COM"
+      ],
+      "bbox": [
+        137768.8084281346,
+        4014397.0,
+        567491.0,
+        7968291.0
+      ],
+      "size_mb": 0.05
+    },
+    {
+      "archivo": "_geojson/DGA__IPCN2025__IPCN2025.geojson",
+      "fuente": "DGA",
+      "features": 300,
+      "campos": [
+        "NOM_CUEN",
+        "COD_CUEN",
+        "AREA_KM2",
+        "MZON_GLAC",
+        "COTA_MAX",
+        "COTA_PROM",
+        "COTA_MIN",
+        "AREA_CUEN",
+        "PCN",
+        "FUENTE_DIG",
+        "FUEN_FECHA",
+        "MES",
+        "DATUM",
+        "HUSO"
+      ],
+      "bbox": [
+        -6500.0,
+        3850500.0,
+        699500.0,
+        8047000.0
+      ],
+      "size_mb": 13.18
+    },
+    {
+      "archivo": "_geojson/DGA__IPLG_2024__IPLG_2024.geojson",
+      "fuente": "DGA",
+      "features": 5386,
+      "campos": [
+        "OBJECTID",
+        "COD_LAG",
+        "NOMBRE",
+        "CLASIFICA",
+        "TIPO_REPRE",
+        "GLA_ASOCIA",
+        "ELEVACION",
+        "AREA_KM2",
+        "PERIMET_KM",
+        "VOL_KM3",
+        "REGION",
+        "PROVINCIA",
+        "COMUNA",
+        "CUT_REG",
+        "CUT_PROV",
+        "CUT_COM",
+        "NOM_CUEN",
+        "NOM_SSUBC",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "MZON_GLAC",
+        "DATUM",
+        "HUSO",
+        "ESTE_M",
+        "NORTE_M",
+        "LATITUD",
+        "LONGITUD",
+        "FUEN_DIG",
+        "RES_M",
+        "FUEN_FECHA",
+        "COD_IMG",
+        "CONT_HIELO",
+        "ERROR_PORC"
+      ],
+      "bbox": [
+        57768.75899999961,
+        3854124.4776,
+        583353.506,
+        8034081.5379
+      ],
+      "size_mb": 32.67
+    },
+    {
+      "archivo": "_geojson/DGA__Indice_de_Calidad_de_Aguas__ICA_Indice_Calidad_Aguas.geojson",
+      "fuente": "DGA",
+      "features": 512,
+      "campos": [
+        "OBJECTID_1",
+        "ID_IDE",
+        "REGION",
+        "PROVINCIA",
+        "COMUNA",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "NOMBRE_APR",
+        "NOMBRE_BNA",
+        "COD_BNA",
+        "UTM_ESTE",
+        "UTM_Norte",
+        "NOM_ACUIF",
+        "SHAC",
+        "PARAMETROS",
+        "REFERENCIA",
+        "VAL_ICA_14",
+        "ICA_2014",
+        "VAL_ICA_15",
+        "ICA_2015",
+        "VAL_ICA_16",
+        "ICA_2016",
+        "VAL_ICA_17",
+        "ICA_2017",
+        "REF_1",
+        "REF_2",
+        "REF_3",
+        "ULTIMO_ICA",
+        "CATEGORIA"
+      ],
+      "bbox": [
+        -72.60168121299995,
+        -36.25852456699994,
+        -70.31966576999997,
+        -29.242654794999964
+      ],
+      "size_mb": 0.43
+    },
+    {
+      "archivo": "_geojson/DGA__Juntas_de_Vigilancia__INV_Juntas_de_Vigilancia.geojson",
+      "fuente": "DGA",
+      "features": 54,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "JV_ID",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "REG_RPOU",
+        "ORG_USUARI",
+        "REGION_SIG",
+        "AREA_km2",
+        "UTM_NORTE",
+        "UTM_ESTE",
+        "JURISDICCI",
+        "RES_DGA",
+        "FECHA_RES_",
+        "AÃO_INSCR",
+        "AÃO_CONST",
+        "CUENCA_PRI",
+        "RIO_ESTERO",
+        "AFLUENTE",
+        "SECCIONAMI",
+        "COD_EXPEDI",
+        "NOM_REG",
+        "NOM_PROV",
+        "NOM_COM"
+      ],
+      "bbox": [
+        -72.69826278999994,
+        -38.25150886799997,
+        -69.08218455099997,
+        -17.634293654999947
+      ],
+      "size_mb": 42.55
+    },
+    {
+      "archivo": "_geojson/DGA__Lagos__Lagos.geojson",
+      "fuente": "DGA",
+      "features": 2067,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "NUM",
+        "AREA_KM2",
+        "NOMBRE",
+        "CODIGO",
+        "TIPO",
+        "CODCPA",
+        "CODBNA",
+        "REGION",
+        "PROVINCIA",
+        "COMUNA",
+        "LATITUD",
+        "LONGITUD",
+        "ALTITUD",
+        "SUPCUENCA",
+        "SUPLAGO",
+        "SUPHOYA",
+        "CLASIFICAC",
+        "USO",
+        "INFORMACIO",
+        "AREACHILE",
+        "REGION_NUM"
+      ],
+      "bbox": [
+        -75.56712893399998,
+        -55.30330121099996,
+        -67.06835788499994,
+        -17.623438905999947
+      ],
+      "size_mb": 8.71
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Datos_Hidrogeogr†ficos.geojson",
+      "fuente": "DGA",
+      "features": 1009,
+      "campos": [
+        "TIPO_DATO",
+        "Shape_Leng"
+      ],
+      "bbox": [
+        -75.65439125930702,
+        -54.71306062439881,
+        -67.19787226599131,
+        -17.762633413763513
+      ],
+      "size_mb": 2.43
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Datos_de_Pozos.geojson",
+      "fuente": "DGA",
+      "features": 291,
+      "campos": [
+        "TIPO_POZO",
+        "U_ACUI_CAP",
+        "PROF_M",
+        "PROF_NE_M",
+        "PRODUCTIV",
+        "CAL_SUB"
+      ],
+      "bbox": [
+        -73.47147035803515,
+        -53.07368124315325,
+        -67.88087817778936,
+        -17.62653528117742
+      ],
+      "size_mb": 0.07
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Geologia.geojson",
+      "fuente": "DGA",
+      "features": 422,
+      "campos": [
+        "TIPO_CONT",
+        "Shape_Leng"
+      ],
+      "bbox": [
+        -75.4116757721513,
+        -55.62843556109476,
+        -67.22893499838828,
+        -17.7935348769119
+      ],
+      "size_mb": 0.38
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Informacion_Hidrogeologica_General.geojson",
+      "fuente": "DGA",
+      "features": 233,
+      "campos": [
+        "TIPO_INFOR",
+        "Shape_Leng"
+      ],
+      "bbox": [
+        -74.06201673630069,
+        -54.568300986512995,
+        -67.92392746888147,
+        -17.619364451604444
+      ],
+      "size_mb": 0.35
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Ocurrencia_Aguas_Subterraneas.geojson",
+      "fuente": "DGA",
+      "features": 3310,
+      "campos": [
+        "OBJECTID",
+        "COD_FORMA",
+        "NOM_FORMAC",
+        "PERMEABLE",
+        "PPAL_FORMA",
+        "IMP_HIDROG",
+        "CARAC_GRAL",
+        "AREA_KM2"
+      ],
+      "bbox": [
+        -75.70932199099997,
+        -55.99623828799997,
+        -66.41632060299997,
+        -17.517799407999973
+      ],
+      "size_mb": 20.59
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Perfiles_Hidrogeologicos_Esquematicos.geojson",
+      "fuente": "DGA",
+      "features": 47,
+      "campos": [
+        "CARAC_ESP",
+        "ESPESOR",
+        "ESTRATO_AT"
+      ],
+      "bbox": [
+        -73.57042461632646,
+        -53.86487331588248,
+        -67.9470794056609,
+        -19.354925969495792
+      ],
+      "size_mb": 0.01
+    },
+    {
+      "archivo": "_geojson/DGA__Mapa_Hidrogeol¢gico__Productividad_de_Pozos.geojson",
+      "fuente": "DGA",
+      "features": 232,
+      "campos": [
+        "OBJECTID",
+        "PRODUCTIV",
+        "TIPO_PROD",
+        "AREA_KM2",
+        "created_us",
+        "created_da",
+        "last_edite",
+        "last_edi_1",
+        "GlobalID",
+        "SHAPE_STAr",
+        "SHAPE_STLe"
+      ],
+      "bbox": [
+        -73.66273483399993,
+        -53.168194289999974,
+        -67.81954647899994,
+        -18.317297465999957
+      ],
+      "size_mb": 1.03
+    },
+    {
+      "archivo": "_geojson/DGA__Precipitaciones_Maximas_Diarias__PP_Maximas_Diarias_Zonas_Homogeneas.geojson",
+      "fuente": "DGA",
+      "features": 41,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_ZONA",
+        "NOMBRE",
+        "AREA_KM2"
+      ],
+      "bbox": [
+        -73.94541159899995,
+        -41.812369590999936,
+        -67.58119197599994,
+        -17.498424411999952
+      ],
+      "size_mb": 1.75
+    },
+    {
+      "archivo": "_geojson/DGA__Precipitaciones_Maximas_Diarias__Precipitaciones_Maximas_Diarias.geojson",
+      "fuente": "DGA",
+      "features": 220,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "VARIABLE",
+        "VALOR_MM"
+      ],
+      "bbox": [
+        -73.99511699899995,
+        -53.46178902499997,
+        -67.74574257999997,
+        -17.560871283999948
+      ],
+      "size_mb": 0.91
+    },
+    {
+      "archivo": "_geojson/DGA__Red_Hidrometrica_Nacional__Red_Hidrometrica_Nacional.geojson",
+      "fuente": "DGA",
+      "features": 3563,
+      "campos": [
+        "OBJECTID",
+        "NUM",
+        "ID_IDE",
+        "FUENTE",
+        "LEVANTAMIE",
+        "FECHA_ACTU",
+        "COD_BNA",
+        "NOM_ESTACI",
+        "F_INSTALAC",
+        "F_LLENADO",
+        "F_SUSPENSI",
+        "REGION",
+        "PROVINCIA",
+        "COMUNA",
+        "REG_RESPON",
+        "CUENCA",
+        "SUBCUENCA",
+        "SUBSUBCUEN",
+        "ACUIFERO",
+        "SHAC",
+        "UTM_ESTE_8",
+        "UTM_NORTE_",
+        "HUSO",
+        "ALTITUD_MS",
+        "AREA_DRENA",
+        "LATITUD_DM",
+        "LONGITUD_D",
+        "UBICACION",
+        "LUGAR",
+        "INSTITUCIO",
+        "TIPO_EST_1",
+        "TIPO_EST_2",
+        "TIPO_EST_3",
+        "TIPO_EST_4",
+        "FUENTE_01",
+        "FUENTE_02",
+        "FUENTE_03",
+        "FUENTE_04",
+        "LAGO_ASOCI",
+        "LATITUD",
+        "LONGITUD"
+      ],
+      "bbox": [
+        -109.42138975299997,
+        -55.13195072199994,
+        -67.07568713299997,
+        -17.594869288999973
+      ],
+      "size_mb": 4.02
+    },
+    {
+      "archivo": "_geojson/DGA__Reserva_de_Caudales__Reserva_de_Caudales.geojson",
+      "fuente": "DGA",
+      "features": 47,
+      "campos": [
+        "ID_IDE",
+        "COD_REG",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "NOM_RESERV",
+        "TIPO_RESER",
+        "NATURALEZA",
+        "MOTIVO",
+        "NUM_DECRET",
+        "FECHA_DECR",
+        "F_PUB_DO",
+        "COMPLEMENT",
+        "ANO_DECRET",
+        "INFORME_TE",
+        "DERECHOS_R",
+        "VOL_O_Q",
+        "UNIDAD"
+      ],
+      "bbox": [
+        -73.93341628899998,
+        -53.85522979399997,
+        -69.68668293299993,
+        -28.42998178999994
+      ],
+      "size_mb": 8.93
+    },
+    {
+      "archivo": "_geojson/DGA__SitioRamsar__Sitios_Ramsar_puntos.geojson",
+      "fuente": "DGA",
+      "features": 13,
+      "campos": [
+        "ID",
+        "Nombre",
+        "Fecha",
+        "RegiÃ³n",
+        "Ãrea__Ha_",
+        "Latitud",
+        "Longitud",
+        "Este",
+        "Norte",
+        "Datum",
+        "Huso",
+        "Num_Mapa",
+        "Area_Km2"
+      ],
+      "bbox": [
+        141008.8395999996,
+        4168591.994,
+        679272.0089999996,
+        7915367.767
+      ],
+      "size_mb": 0.01
+    },
+    {
+      "archivo": "_geojson/DGA__SubCuencas_BNA__SubCuencas_BNA.geojson",
+      "fuente": "DGA",
+      "features": 489,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_CUEN",
+        "COD_SUBC",
+        "NOM_SUBC",
+        "COD_REGION",
+        "COD_REG"
+      ],
+      "bbox": [
+        -109.45013247199995,
+        -56.54378842999995,
+        -66.24092822299997,
+        -17.498424411999977
+      ],
+      "size_mb": 13.08
+    },
+    {
+      "archivo": "_geojson/DGA__SubSubCuencas_BNA__SubSubCuencas_BNA.geojson",
+      "fuente": "DGA",
+      "features": 1672,
+      "campos": [
+        "OBJECTID",
+        "ID_IDE",
+        "REGION",
+        "FUENTE",
+        "FECHA_ACTU",
+        "LEVANTAMIE",
+        "COD_CUEN",
+        "COD_SUBC",
+        "COD_SSUBC",
+        "NOM_SSUBC",
+        "COD_REGION",
+        "COD_REG"
+      ],
+      "bbox": [
+        -109.45013247199995,
+        -56.54378842999995,
+        -66.24092822299997,
+        -17.498424411999963
+      ],
+      "size_mb": 19.09
+    }
+  ],
+  "bases_datos": [
+    {
+      "archivo": "_db/catastro_fruticola.db",
+      "size_mb": 60.1,
+      "tablas": [
+        {
+          "tabla": "catastro_fruticola",
+          "filas": 278085,
+          "columnas": [
+            "Anio",
+            "ID region",
+            "Region",
+            "Provincia",
+            "Comuna",
+            "Número explotación",
+            "Número bloque",
+            "Tipo productor",
+            "Especie",
+            "Variedad",
+            "Anio plantacion",
+            "Metodo de riego",
+            "Numero de arboles",
+            "Superficie (ha)"
+          ]
+        },
+        {
+          "tabla": "catastro_completo",
+          "filas": 278085,
+          "columnas": [
+            "anio",
+            "id_region",
+            "region",
+            "provincia",
+            "comuna",
+            "número_explotación",
+            "número_bloque",
+            "tipo_productor",
+            "especie",
+            "variedad",
+            "anio_plantacion",
+            "metodo_de_riego",
+            "numero_de_arboles",
+            "superficie_(ha)"
+          ]
+        },
+        {
+          "tabla": "resumen_por_comuna",
+          "filas": 2365,
+          "columnas": [
+            "comuna",
+            "especie",
+            "superficie_ha",
+            "num_explotaciones"
+          ]
+        },
+        {
+          "tabla": "resumen_por_especie",
+          "filas": 59,
+          "columnas": [
+            "especie",
+            "superficie_ha",
+            "num_registros",
+            "num_comunas"
+          ]
+        }
+      ]
+    },
+    {
+      "archivo": "_db/crm_cge.db",
+      "size_mb": 0.7,
+      "tablas": [
+        {
+          "tabla": "crm_cge",
+          "filas": 2488,
+          "columnas": [
+            "empresa",
+            "rut",
+            "n_cuenta",
+            "distribuidora",
+            "tarifa",
+            "potencia_kw",
+            "consumo_anual_kwh",
+            "gasto_anual",
+            "ahorro_20",
+            "contacto",
+            "telfono",
+            "correo",
+            "inters",
+            "estado",
+            "ltima_gestin",
+            "comentarios",
+            "link_ficha",
+            "direccin",
+            "comuna"
+          ]
+        },
+        {
+          "tabla": "consumo_mensual",
+          "filas": 3522,
+          "columnas": [
+            "n_cliente",
+            "nombre",
+            "direccin",
+            "comuna",
+            "tarifa",
+            "fecha_boleta",
+            "kwh",
+            "demanda_max_kw",
+            "demanda_hp_kw",
+            "potencia_contratada_kw",
+            "cargo_fijo",
+            "costo_energa",
+            "costo_demanda",
+            "fet",
+            "total_neto",
+            "iva",
+            "total_a_pagar",
+            "deuda_actual",
+            "ref_boleta"
+          ]
+        },
+        {
+          "tabla": "resumen_clientes",
+          "filas": 305,
+          "columnas": [
+            "n_cliente",
+            "nombre",
+            "direccin",
+            "comuna",
+            "tarifa",
+            "n_boletas",
+            "potencia_kw",
+            "kwh_anual_est",
+            "gasto_anual_est",
+            "ahorro_20",
+            "demanda_max_kw",
+            "demanda_hp_kw",
+            "deuda_actual",
+            "nombre_1",
+            "direccin_1",
+            "consumo"
+          ]
+        }
+      ]
+    },
+    {
+      "archivo": "_db/dga_derechos.db",
+      "size_mb": 56.6,
+      "tablas": [
+        {
+          "tabla": "resumen_por_region",
+          "filas": 19,
+          "columnas": [
+            "region",
+            "num_patentes",
+            "saldo_total",
+            "saldo_promedio",
+            "monto_total",
+            "monto_promedio"
+          ]
+        },
+        {
+          "tabla": "resumen_por_comuna",
+          "filas": 345,
+          "columnas": [
+            "region",
+            "comuna",
+            "num_patentes",
+            "saldo_total",
+            "saldo_promedio",
+            "monto_total",
+            "monto_promedio"
+          ]
+        },
+        {
+          "tabla": "patentes",
+          "filas": 260623,
+          "columnas": [
+            "cuenta",
+            "rut_rol",
+            "tipo_persona",
+            "rut_rol_dv",
+            "form_folio",
+            "monto",
+            "saldo",
+            "pagado",
+            "fecha",
+            "mov_tipo",
+            "tesoreria",
+            "tesoreria_regional",
+            "comuna",
+            "concesion",
+            "provincia",
+            "oficina_cbr",
+            "n_de_correlativo_o_patente",
+            "anio_patente",
+            "utm",
+            "oficina",
+            "fecha_ejecucion"
+          ]
+        }
+      ]
+    },
+    {
+      "archivo": "_db/electrico.db",
+      "size_mb": 0.1,
+      "tablas": [
+        {
+          "tabla": "datos_brutos",
+          "filas": 0,
+          "columnas": [
+            "empresa",
+            "region_id",
+            "nombre_region",
+            "comuna_id",
+            "nombre_comuna",
+            "potencia_contratada"
+          ]
+        },
+        {
+          "tabla": "clientes_por_comuna",
+          "filas": 329,
+          "columnas": [
+            "comuna_id",
+            "nombre_comuna",
+            "nombre_region",
+            "total_clientes",
+            "potencia_total_kw",
+            "potencia_promedio_kw"
+          ]
+        },
+        {
+          "tabla": "clientes_por_empresa_comuna",
+          "filas": 482,
+          "columnas": [
+            "empresa",
+            "comuna_id",
+            "nombre_comuna",
+            "total_clientes",
+            "potencia_total_kw"
+          ]
+        },
+        {
+          "tabla": "resumen_regional",
+          "filas": 16,
+          "columnas": [
+            "nombre_region",
+            "total_clientes",
+            "potencia_total_kw",
+            "num_comunas"
+          ]
+        }
+      ]
+    },
+    {
+      "archivo": "_db/odepa.db",
+      "size_mb": 0.0,
+      "tablas": [
+        {
+          "tabla": "cultivosanualeshistorico",
+          "filas": 20,
+          "columnas": [
+            "unnamed_0",
+            "unnamed_1",
+            "unnamed_2"
+          ]
+        },
+        {
+          "tabla": "cultivosregional",
+          "filas": 17,
+          "columnas": [
+            "unnamed_0",
+            "unnamed_1",
+            "unnamed_2"
+          ]
+        },
+        {
+          "tabla": "superficiefruticola",
+          "filas": 38,
+          "columnas": [
+            "evolucin_de_la_superficie_plantada_regin_de_arica_y_parinacota",
+            "unnamed_1",
+            "unnamed_2",
+            "unnamed_3",
+            "unnamed_4",
+            "unnamed_5"
+          ]
+        },
+        {
+          "tabla": "hortalizasx",
+          "filas": 22,
+          "columnas": [
+            "unnamed_0",
+            "unnamed_1",
+            "unnamed_2"
+          ]
+        },
+        {
+          "tabla": "videssuperficieproduccion",
+          "filas": 43,
+          "columnas": [
+            "unnamed_0",
+            "unnamed_1",
+            "unnamed_2",
+            "unnamed_3",
+            "unnamed_4",
+            "unnamed_5",
+            "unnamed_6",
+            "unnamed_7",
+            "unnamed_8",
+            "unnamed_9"
+          ]
+        },
+        {
+          "tabla": "existenciasbovovicaprinosx",
+          "filas": 24,
+          "columnas": [
+            "existencia_de_ganado_bovino_en_explotaciones_con_rebaos_de_10_cabezas_y_ms_segn_regiones_seleccionadas",
+            "unnamed_1",
+            "unnamed_2",
+            "unnamed_3",
+            "unnamed_4",
+            "unnamed_5"
+          ]
+        }
+      ]
+    }
+  ],
+  "servicios_wms": [
+    {
+      "nombre": "CIREN Suelos",
+      "url": "https://ide.minagri.gob.cl/geoserver/CIREN/wms",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Agroclima",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/AGROCLIMA_IDEMINAGRI/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Catastro Frutícola",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/CATASTRO_FRUTICOLA/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Erosión",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/EROSION/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Incendios",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/INCENDIOS_FORESTALES/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Usos Tierra",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/USOS_DE_LA_TIERRA/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Riego",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/INFRAESTRUCTURA_RIEGO/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Censo Agropecuario",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/CENSO_AGROPECUARIO/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "IDE MINAGRI Recursos Forestales",
+      "url": "https://esri.ciren.cl/server/services/IDEMINAGRI/RECURSOS_FORESTALES/MapServer/WMSServer",
+      "tipo": "WMS"
+    },
+    {
+      "nombre": "ARCLIM API",
+      "url": "https://arclim.mma.gob.cl/atlas/api/",
+      "tipo": "REST"
+    },
+    {
+      "nombre": "DGA Restricciones",
+      "url": "https://rest-sit.mop.gov.cl/arcgis/rest/services/DGA/Restricciones/MapServer",
+      "tipo": "ArcGIS REST"
+    },
+    {
+      "nombre": "IDE Bienes Nacionales",
+      "url": "https://ide.bienes.cl/",
+      "tipo": "WMS/WFS"
+    }
+  ],
+  "archivos_grandes_shp": [
+    {
+      "ruta": "CONAF/01__regi_n_de_tarapac__actualizaci_n_2016/",
+      "size_mb": 313.0,
+      "nota": "Cargar directo en QGIS/PostGIS"
+    },
+    {
+      "ruta": "CONAF/15__region_de_arica_y_parinacota_2015/",
+      "size_mb": 263.0,
+      "nota": "Cargar directo en QGIS/PostGIS"
+    },
+    {
+      "ruta": "DGA/03__regi_n_de_atacama_actualizaci_n_2018/",
+      "size_mb": 688.0,
+      "nota": "Cargar directo en QGIS/PostGIS"
+    },
+    {
+      "ruta": "DGA/04__regi_n_de_coquimbo_actualizacion_2014/",
+      "size_mb": 524.0,
+      "nota": "Cargar directo en QGIS/PostGIS"
+    }
+  ]
+}

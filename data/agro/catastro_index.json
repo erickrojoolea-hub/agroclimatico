@@ -1,0 +1,91 @@
+{
+  "dataset": "Catastro Frutícola de Chile",
+  "source": {
+    "portal": "datos.gob.cl",
+    "organismo": "ODEPA - Oficina de Estudios y Políticas Agrarias",
+    "colaborador": "CIREN - Centro de Información de Recursos Naturales",
+    "url_dataset": "https://datos.gob.cl/dataset/catastro-fruticola1"
+  },
+  "descarga": {
+    "fecha": "2026-04-12",
+    "ruta_local": "/sessions/gracious-loving-noether/mnt/Scrapping Estado/datos_geo/CATASTRO_FRUTICOLA/"
+  },
+  "archivos": [
+    {
+      "nombre": "catastro_fruticola_2025.csv",
+      "year": 2025,
+      "tamaño_mb": 4.3,
+      "registros": 31626,
+      "url_descarga": "https://datos.odepa.gob.cl/dataset/ea82304e-917f-4cdb-abf6-555782483dc1/resource/1bbc9838-6032-4b89-96e5-8c2ed5d91e3f/download/catastro_fruticola_2025.csv",
+      "estado": "parcial_año_en_curso"
+    },
+    {
+      "nombre": "catastro_fruticola_2024.csv",
+      "year": 2024,
+      "tamaño_mb": 14,
+      "registros": 103716,
+      "url_descarga": "https://datos.odepa.gob.cl/dataset/ea82304e-917f-4cdb-abf6-555782483dc1/resource/e5d0481f-bd99-4e38-b86e-e1030b40997a/download/catastro_fruticola_2024.csv",
+      "estado": "completo"
+    },
+    {
+      "nombre": "catastro_fruticola_2023.csv",
+      "year": 2023,
+      "tamaño_mb": 4.5,
+      "registros": 32960,
+      "url_descarga": "https://datos.odepa.gob.cl/dataset/ea82304e-917f-4cdb-abf6-555782483dc1/resource/ecffc521-b6ce-45fe-8251-7f3a2cc149ea/download/catastro_fruticola_2023.csv",
+      "estado": "completo"
+    },
+    {
+      "nombre": "catastro_fruticola_2022.csv",
+      "year": 2022,
+      "tamaño_mb": 7.7,
+      "registros": 61495,
+      "url_descarga": "https://datos.odepa.gob.cl/dataset/ea82304e-917f-4cdb-abf6-555782483dc1/resource/cc9b9b9d-af47-4928-8a3b-af93632c6658/download/catastro_fruticola_2022.csv",
+      "estado": "completo"
+    },
+    {
+      "nombre": "catastro_fruticola_2021.csv",
+      "year": 2021,
+      "tamaño_mb": 6.9,
+      "registros": 48288,
+      "url_descarga": "https://datos.odepa.gob.cl/dataset/ea82304e-917f-4cdb-abf6-555782483dc1/resource/a1a3ffab-f3fd-4928-8948-c1bd9ba82d9c/download/catastro_fruticola_2021.csv",
+      "estado": "completo"
+    }
+  ],
+  "resumen": {
+    "total_mb": 37.4,
+    "total_registros": 278085,
+    "años": [2021, 2022, 2023, 2024, 2025]
+  },
+  "estructura_datos": {
+    "columnas": 14,
+    "campos": [
+      "Anio",
+      "ID region",
+      "Region",
+      "Provincia",
+      "Comuna",
+      "Número explotación",
+      "Número bloque",
+      "Tipo productor",
+      "Especie",
+      "Variedad",
+      "Anio plantacion",
+      "Metodo de riego",
+      "Numero de arboles",
+      "Superficie (ha)"
+    ]
+  },
+  "georeferencia": {
+    "tipo": "administrativa",
+    "nivel_minimo": "Comuna",
+    "contiene_coordenadas_xy": false,
+    "nota": "Para datos con coordenadas exactas, contactar a CIREN"
+  },
+  "notas": [
+    "Los CSV contienen datos de explotaciones frutícolas a nivel de región, provincia y comuna",
+    "No incluyen coordenadas lat/long explícitas",
+    "ArcGIS Hub no ofrece descargas directas de SHP o GeoJSON",
+    "Para mayor detalle espacial: CIREN ciren@ciren.cl +56 2 2200 8900"
+  ]
+}

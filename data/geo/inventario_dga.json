@@ -1,0 +1,54 @@
+{
+  "fecha_descarga": "2026-04-12T23:17:57.041404",
+  "directorio": "/sessions/gracious-loving-noether/mnt/Scrapping Estado/datos_geo/DGA",
+  "archivos": [
+    {
+      "nombre": "README_DGA.txt",
+      "tamaño_bytes": 4894,
+      "tamaño_mb": 0.0,
+      "fecha_modificacion": "2026-04-12T23:17:52.395426"
+    },
+    {
+      "nombre": "derechosconcedidos_2025.xlsx",
+      "tamaño_bytes": 38595243,
+      "tamaño_mb": 36.8,
+      "fecha_modificacion": "2026-04-12T23:16:04.760314"
+    },
+    {
+      "nombre": "patentes_aguas_april_2026.csv",
+      "tamaño_bytes": 9534485,
+      "tamaño_mb": 9.1,
+      "fecha_modificacion": "2026-04-12T23:12:10.188690"
+    },
+    {
+      "nombre": "patentes_aguas_december_2025.csv",
+      "tamaño_bytes": 11678252,
+      "tamaño_mb": 11.1,
+      "fecha_modificacion": "2026-04-12T23:15:22.386621"
+    },
+    {
+      "nombre": "patentes_aguas_february_2026.csv",
+      "tamaño_bytes": 13807567,
+      "tamaño_mb": 13.2,
+      "fecha_modificacion": "2026-04-12T23:13:32.671794"
+    },
+    {
+      "nombre": "patentes_aguas_january_2026.csv",
+      "tamaño_bytes": 9059762,
+      "tamaño_mb": 8.6,
+      "fecha_modificacion": "2026-04-12T23:13:25.015192"
+    },
+    {
+      "nombre": "patentes_aguas_march_2026.csv",
+      "tamaño_bytes": 13815716,
+      "tamaño_mb": 13.2,
+      "fecha_modificacion": "2026-04-12T23:13:27.058188"
+    },
+    {
+      "nombre": "patentes_aguas_november_2025.csv",
+      "tamaño_bytes": 13212737,
+      "tamaño_mb": 12.6,
+      "fecha_modificacion": "2026-04-12T23:14:47.308284"
+    }
+  ]
+}

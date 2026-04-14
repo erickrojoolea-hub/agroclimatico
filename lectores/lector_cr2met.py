@@ -28,9 +28,17 @@ PR_NC = os.path.join(BASE_CR2, 'CR2MET_pr_v2.0_day_1979_2020_005deg.nc')
 TMIN_NC = os.path.join(BASE_CR2, 'CR2MET_tmin_v2.0_day_1979_2020_005deg.nc')
 
 # Cache de climatologías pre-procesadas
+# Buscar primero en data/climate/ (repo-local), luego en datos_precipitacion/ (symlink)
+def _find_cache(name):
+    for subdir in ('data/climate', 'datos_precipitacion'):
+        p = os.path.join(_PROJECT_ROOT, subdir, name)
+        if os.path.exists(p):
+            return p
+    return os.path.join(_PROJECT_ROOT, 'data', 'climate', name)
+
 CACHE_DIR = os.path.join(_PROJECT_ROOT, 'datos_precipitacion')
-PR_CACHE = os.path.join(CACHE_DIR, 'cr2met_climatologia_puntos.json')
-TMIN_CACHE = os.path.join(CACHE_DIR, 'cr2met_tmin_heladas_cache.json')
+PR_CACHE = _find_cache('cr2met_climatologia_puntos.json')
+TMIN_CACHE = _find_cache('cr2met_tmin_heladas_cache.json')
 
 
 def tiene_precipitacion():

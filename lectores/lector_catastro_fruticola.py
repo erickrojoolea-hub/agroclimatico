@@ -19,7 +19,12 @@ import json
 from collections import defaultdict
 
 BASE = os.path.join(os.path.dirname(__file__), '..')
-CONSOLIDADO = os.path.join(BASE, 'BD_agro', 'catastro_fruticola_consolidado.csv')
+
+# Buscar primero en data/agro/ (repo-local), luego en BD_agro/ (symlink)
+_LOCAL_CONSOLIDADO = os.path.join(BASE, 'data', 'agro', 'catastro_fruticola_consolidado.csv')
+_SYMLINK_CONSOLIDADO = os.path.join(BASE, 'BD_agro', 'catastro_fruticola_consolidado.csv')
+CONSOLIDADO = _LOCAL_CONSOLIDADO if os.path.exists(_LOCAL_CONSOLIDADO) else _SYMLINK_CONSOLIDADO
+
 DETALLADO_DIR = os.path.join(BASE, 'datos_geo', 'CATASTRO_FRUTICOLA')
 
 # Coordenadas centrales aproximadas de comunas agrícolas principales

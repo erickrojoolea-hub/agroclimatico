@@ -18,11 +18,19 @@ Referencias:
 import csv
 import os
 
-BASE = os.path.join(os.path.dirname(__file__), '..', 'datos_precipitacion')
+_PROJECT = os.path.join(os.path.dirname(__file__), '..')
 
-ONI_CSV = os.path.join(BASE, 'indice_oni_enso.csv')
-PDO_CSV = os.path.join(BASE, 'indice_pdo.csv')
-SOI_CSV = os.path.join(BASE, 'indice_soi.csv')
+# Buscar primero en data/indices/ (repo-local), luego en datos_precipitacion/ (symlink)
+def _find_index(name):
+    for subdir in ('data/indices', 'datos_precipitacion'):
+        p = os.path.join(_PROJECT, subdir, name)
+        if os.path.exists(p):
+            return p
+    return os.path.join(_PROJECT, 'data', 'indices', name)
+
+ONI_CSV = _find_index('indice_oni_enso.csv')
+PDO_CSV = _find_index('indice_pdo.csv')
+SOI_CSV = _find_index('indice_soi.csv')
 
 
 def cargar_oni():

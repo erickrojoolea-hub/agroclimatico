@@ -30,9 +30,13 @@ import math
 from collections import defaultdict
 
 # Rutas relativas al directorio datos_geo/CR2/
-BASE_CR2 = os.path.join(os.path.dirname(__file__), '..', 'datos_geo', 'CR2')
+_PROJECT = os.path.join(os.path.dirname(__file__), '..')
+BASE_CR2 = os.path.join(_PROJECT, 'datos_geo', 'CR2')
 
-MONTHLY_STATIONS = os.path.join(BASE_CR2, 'cr2_prAmon_2019', 'cr2_prAmon_2019_stations.txt')
+# Buscar estaciones primero en data/estaciones/ (repo-local), luego en datos_geo/CR2/
+_LOCAL_STATIONS = os.path.join(_PROJECT, 'data', 'estaciones', 'cr2_prAmon_2019_stations.txt')
+_SYMLINK_STATIONS = os.path.join(BASE_CR2, 'cr2_prAmon_2019', 'cr2_prAmon_2019_stations.txt')
+MONTHLY_STATIONS = _LOCAL_STATIONS if os.path.exists(_LOCAL_STATIONS) else _SYMLINK_STATIONS
 MONTHLY_DATA = os.path.join(BASE_CR2, 'cr2_prAmon_2019', 'cr2_prAmon_2019.txt')
 DAILY_STATIONS = os.path.join(BASE_CR2, 'cr2_prDaily_2020', 'cr2_prDaily_2020_stations.txt')
 DAILY_DATA = os.path.join(BASE_CR2, 'cr2_prDaily_2020', 'cr2_prDaily_2020.txt')
