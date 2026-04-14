@@ -9,3 +9,6 @@ reportlab>=4.0.0
 openpyxl>=3.1.0
 pyshp>=2.3.0
 earthengine-api>=0.1.380
+scipy>=1.11.0
+xarray>=2023.0.0
+netCDF4>=1.6.0

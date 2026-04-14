@@ -392,20 +392,20 @@ if 'producto' not in st.session_state:
 producto = st.session_state.get('producto')
 _selected_class = lambda key: "selected" if producto == key else ""
 
-col_p1, col_p2, col_p3 = st.columns(3)
+col_p1, col_p2, col_p3, col_p4 = st.columns(4)
 with col_p1:
     st.markdown(f"""
     <div class="product-card {_selected_class('meteo')}">
         <h3>Informe Meteorologico</h3>
         <div class="price">$100.000</div>
         <div class="desc">
-            Analisis agroclimatico completo con datos PVsyst/Meteonorm 8.2.
-            Temperaturas, heladas, dias-grado, balance hidrico, aptitud de cultivos,
-            NDVI satelital, energia solar. PDF descargable.
+            Analisis agroclimatico con datos PVsyst/Meteonorm 8.2.
+            Temperaturas, heladas, dias-grado, balance hidrico,
+            aptitud de cultivos, NDVI, energia solar.
         </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("Seleccionar Meteorologico", key="btn_meteo", use_container_width=True):
+    if st.button("Seleccionar Meteo", key="btn_meteo", use_container_width=True):
         st.session_state.producto = "meteo"
         st.rerun()
 
@@ -415,9 +415,9 @@ with col_p2:
         <h3>Informe Predial</h3>
         <div class="price">$100.000</div>
         <div class="desc">
-            Analisis territorial por comuna: produccion agricola real (catastro fruticola),
-            derechos de agua (DGA), infraestructura electrica, uso de suelo,
-            riesgos territoriales. Estilo Autofact.
+            Analisis territorial: produccion agricola (catastro fruticola),
+            derechos de agua (DGA), infraestructura electrica,
+            uso de suelo, riesgos, ficha SII.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -427,14 +427,30 @@ with col_p2:
 
 with col_p3:
     st.markdown(f"""
+    <div class="product-card {_selected_class('meteo_avanzado')}">
+        <h3>Meteo Avanzado</h3>
+        <div class="price">$100.000</div>
+        <div class="desc">
+            Clima punto exacto: CR2MET (41 años), heladas reales,
+            ENSO, megasequia, CHIRPS, riesgo por especie,
+            balance hidrico, pronostico estacional.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Seleccionar Avanzado", key="btn_avanzado", use_container_width=True):
+        st.session_state.producto = "meteo_avanzado"
+        st.rerun()
+
+with col_p4:
+    st.markdown(f"""
     <div class="product-card {_selected_class('combo')}">
         <span class="tag">MEJOR VALOR</span>
         <h3>Combo Completo</h3>
-        <div class="price-combo">$150.000</div>
+        <div class="price-combo">$250.000</div>
         <div class="desc">
-            Ambos informes juntos con un 25% de descuento.
-            Meteorologico + Predial en un solo paquete.
-            La vision completa para decisiones de inversion agricola.
+            Los 3 informes juntos.
+            Meteorologico + Predial + Meteo Avanzado.
+            Vision completa para inversion agricola.
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -448,8 +464,10 @@ st.markdown("---")
 producto = st.session_state.get('producto')
 show_meteo = producto in ('meteo', 'combo') if producto else True
 show_predial = producto in ('predial', 'combo') if producto else True
+show_avanzado = producto in ('meteo_avanzado', 'combo') if producto else False
 
-_product_labels = {'meteo': 'Meteorologico', 'predial': 'Predial', 'combo': 'Combo'}
+_product_labels = {'meteo': 'Meteorologico', 'predial': 'Predial',
+                   'meteo_avanzado': 'Meteo Avanzado', 'combo': 'Combo'}
 if producto:
     st.markdown(f'<div class="hint-box"><b>Producto seleccionado:</b> {_product_labels.get(producto, producto)}</div>',
                 unsafe_allow_html=True)
@@ -521,8 +539,10 @@ with col_map:
             st.session_state.predial_comuna = find_predial_comuna(clicked_lat, clicked_lon)
             st.session_state.processed = False
             st.session_state.predial_processed = False
+            st.session_state.avanzado_processed = False
             st.session_state.pop('predial_report', None)
             st.session_state.pop('predial_pdf', None)
+            st.session_state.pop('avanzado_report', None)
             st.rerun()
 
     # (capa de datos meteorológicos es transparente para el usuario)
@@ -636,12 +656,28 @@ with col_panel:
                                     df, localidad=nombre_match,
                                     precip_custom=precip_inputs,
                                     hr_custom=_hr,
-                                    lat=info_match['lat']
+                                    lat=info_match['lat'],
+                                    alt=info_match.get('alt', 200.0),
                                 )
                                 dc_df = calc_dias_calidos_table(df)
                                 hel_df = calc_heladas_intensidad(df)
                                 winkler = calc_winkler(df)
                                 fototermico, _, _, _ = calc_indice_fototermico(df)
+
+                                # Nuevas variables Santibáñez
+                                from climate_engine import (
+                                    calc_huglin, calc_noches_frias,
+                                    calc_dias_libres_helada, calc_prob_helada_mensual,
+                                    calc_helada_tardia, calc_tipo_helada,
+                                    calc_porciones_frio,
+                                )
+                                huglin_val, huglin_clase = calc_huglin(df, info_match['lat'])
+                                noches_frias_val, noches_frias_clase = calc_noches_frias(df)
+                                dias_libres = calc_dias_libres_helada(df)
+                                prob_helada = calc_prob_helada_mensual(df)
+                                helada_tardia = calc_helada_tardia(df)
+                                tipo_helada = calc_tipo_helada(df)
+                                porciones_frio = calc_porciones_frio(df)
 
                                 bio_tables = {}
                                 analisis_texts = {}
@@ -658,6 +694,15 @@ with col_panel:
                                     'analisis_texts': analisis_texts,
                                     'winkler': winkler,
                                     'fototermico': fototermico,
+                                    'huglin': huglin_val,
+                                    'huglin_clase': huglin_clase,
+                                    'noches_frias': noches_frias_val,
+                                    'noches_frias_clase': noches_frias_clase,
+                                    'dias_libres_helada': dias_libres,
+                                    'prob_helada': prob_helada,
+                                    'helada_tardia': helada_tardia,
+                                    'tipo_helada': tipo_helada,
+                                    'porciones_frio': porciones_frio,
                                     'precip_inputs': precip_inputs,
                                     'nombre_predio': nombre_predio,
                                     'processed': True,
@@ -693,6 +738,31 @@ with col_panel:
                                 lat=st.session_state.pin_lat,
                                 lon=st.session_state.pin_lon,
                             )
+                            # Enriquecer con datos SII del predio específico
+                            try:
+                                from sii_engine import buscar_predio, buscar_predios_cercanos, estadisticas_vecindario
+                                sii_predio = buscar_predio(
+                                    st.session_state.pin_lat,
+                                    st.session_state.pin_lon,
+                                    max_km=0.5,
+                                )
+                                predial_report['sii_predio'] = sii_predio
+                                if sii_predio:
+                                    sii_vecinos = buscar_predios_cercanos(
+                                        st.session_state.pin_lat,
+                                        st.session_state.pin_lon,
+                                        max_km=2.0, max_results=10,
+                                    )
+                                    predial_report['sii_vecinos'] = sii_vecinos
+                                    sii_stats = estadisticas_vecindario(
+                                        st.session_state.pin_lat,
+                                        st.session_state.pin_lon,
+                                        max_km=5.0,
+                                    )
+                                    predial_report['sii_estadisticas'] = sii_stats
+                            except Exception as e_sii:
+                                predial_report['sii_predio'] = None
+
                             st.session_state['predial_report'] = predial_report
                             st.session_state['predial_processed'] = True
                             st.rerun()
@@ -712,6 +782,37 @@ with col_panel:
                     Intente hacer click en otra posicion.</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+        # -- INFORME METEO AVANZADO (auto-generate) -------------------------
+        if show_avanzado:
+            st.markdown("---")
+            st.markdown("""
+            <div class="site-card">
+                <h3>Informe Meteorologico Avanzado</h3>
+                <div class="detail">
+                    Analisis por punto exacto con datos CR2MET (41 años),
+                    heladas reales, ENSO, megasequia, pronostico estacional.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if not st.session_state.get('avanzado_processed'):
+                with st.spinner("Generando informe climatico avanzado (CR2MET + ENSO + CHIRPS)..."):
+                    try:
+                        from advanced_climate_engine import generar_informe_avanzado
+                        avanzado = generar_informe_avanzado(
+                            st.session_state.pin_lat,
+                            st.session_state.pin_lon,
+                            comuna=st.session_state.get('predial_comuna', ''),
+                        )
+                        st.session_state['avanzado_report'] = avanzado
+                        st.session_state['avanzado_processed'] = True
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error generando informe avanzado: {str(e)}")
+                        st.exception(e)
+            else:
+                st.success("Informe avanzado generado. Ver resultados abajo.")
 
 
 # =============================================================================
@@ -788,6 +889,72 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
                 """, unsafe_allow_html=True)
             else:
                 render_metric("Situacion Hidrica", "N/D", "")
+
+        # -- Ficha SII del Predio ------------------------------------------
+        sii_predio = pr.get('sii_predio')
+        if sii_predio:
+            from sii_engine import formato_clp, formato_superficie
+            st.markdown("#### Ficha Catastral del Predio (SII)")
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            with sc1:
+                render_metric("ROL", sii_predio.get('rol', 'N/D'), "")
+            with sc2:
+                render_metric("Avaluo Fiscal",
+                              formato_clp(sii_predio.get('avaluo_total', 0)), "")
+            with sc3:
+                render_metric("Superficie",
+                              formato_superficie(sii_predio.get('sup_terreno_m2', 0)), "")
+            with sc4:
+                render_metric("Destino",
+                              sii_predio.get('destino_desc', 'N/D'), "")
+
+            with st.expander("Detalle catastral SII", expanded=False):
+                det_col1, det_col2 = st.columns(2)
+                with det_col1:
+                    st.markdown(f"**ROL:** {sii_predio.get('rol', 'N/D')}")
+                    st.markdown(f"**Direccion:** {sii_predio.get('direccion', 'N/D')}")
+                    st.markdown(f"**Destino:** {sii_predio.get('destino_desc', 'N/D')} ({sii_predio.get('destino_cod', '')})")
+                    st.markdown(f"**Serie:** {sii_predio.get('serie', 'N/D')}")
+                    if sii_predio.get('ubicacion'):
+                        st.markdown(f"**Ubicacion:** {sii_predio['ubicacion']}")
+                with det_col2:
+                    st.markdown(f"**Avaluo total:** {formato_clp(sii_predio.get('avaluo_total', 0))}")
+                    st.markdown(f"**Avaluo exento:** {formato_clp(sii_predio.get('avaluo_exento', 0))}")
+                    cuota = sii_predio.get('cuota_trimestral', 0)
+                    st.markdown(f"**Contribucion trimestral:** {formato_clp(cuota)}")
+                    if cuota > 0:
+                        st.markdown(f"**Contribucion anual:** {formato_clp(cuota * 4)}")
+                    sup = sii_predio.get('sup_terreno_m2', 0)
+                    st.markdown(f"**Superficie terreno:** {formato_superficie(sup)}")
+                    if sii_predio.get('valor_comercial_m2', 0) > 0:
+                        st.markdown(f"**Valor comercial:** {formato_clp(sii_predio['valor_comercial_m2'])}/m2")
+                    st.markdown(f"**Distancia al click:** {sii_predio.get('distancia_km', 0):.3f} km")
+                    st.markdown(f"**Poligono disponible:** {'Si' if sii_predio.get('has_polygon') else 'No'}")
+
+                # Estadísticas del vecindario
+                sii_stats = pr.get('sii_estadisticas', {})
+                if sii_stats:
+                    st.markdown("---")
+                    st.markdown("**Vecindario (radio 5 km):**")
+                    vs1, vs2, vs3 = st.columns(3)
+                    with vs1:
+                        st.metric("Predios cercanos", sii_stats.get('total_predios', 0))
+                    with vs2:
+                        st.metric("Avaluo promedio", formato_clp(sii_stats.get('avaluo_promedio', 0)))
+                    with vs3:
+                        st.metric("Sup. promedio", f"{sii_stats.get('sup_promedio_ha', 0):.1f} ha")
+                    dest_data = sii_stats.get('por_destino', {})
+                    if dest_data:
+                        st.markdown("**Distribucion por destino:**")
+                        import pandas as pd
+                        df_dest = pd.DataFrame([
+                            {'Destino': k, 'Cantidad': v}
+                            for k, v in sorted(dest_data.items(), key=lambda x: -x[1])
+                        ])
+                        st.dataframe(df_dest, use_container_width=True, hide_index=True)
+        else:
+            st.info("Informacion catastral SII no disponible para este punto. "
+                    "Cobertura actual: Atacama, Coquimbo y partes de Biobio.")
 
         # -- Tabs predial (9 tabs) ----------------------------------------
         predial_tabs = st.tabs([
@@ -1307,6 +1474,323 @@ if show_predial and st.session_state.get('predial_processed') and st.session_sta
 
 
 # =============================================================================
+# RESULTADOS: INFORME METEO AVANZADO (debajo del mapa, full width)
+# =============================================================================
+if show_avanzado and st.session_state.get('avanzado_processed') and st.session_state.get('avanzado_report'):
+    av = st.session_state['avanzado_report']
+    st.markdown("---")
+    st.markdown(f"## Informe Climatico Avanzado")
+    st.caption(f"Punto: {av['lat']:.4f}, {av['lon']:.4f} | "
+               f"Altitud: {av.get('alt', 0):.0f}m | "
+               f"Dist. al mar: {av.get('distancia_mar_km', 0):.0f} km | "
+               f"Generado: {av.get('fecha_generacion', '')} | "
+               f"Tiempo: {av.get('tiempo_generacion_s', 0):.1f}s")
+
+    secciones = av.get('secciones', {})
+
+    # -- KPIs principales --
+    kc1, kc2, kc3, kc4, kc5 = st.columns(5)
+    with kc1:
+        heladas_s = secciones.get('heladas', {})
+        dias_h = heladas_s.get('dias_helada_año_promedio', 0)
+        color_h = '#C62828' if dias_h > 20 else '#F9A825' if dias_h > 5 else '#2E7D32'
+        st.markdown(f"""<div class="metric-card" style="border-left-color: {color_h};">
+            <h3>Heladas/año</h3>
+            <span class="value" style="color: {color_h};">{dias_h:.0f}</span>
+            <span class="unit">dias promedio</span>
+        </div>""", unsafe_allow_html=True)
+    with kc2:
+        precip_s = secciones.get('precipitacion', {})
+        pp_anual = precip_s.get('anual_mm', 0)
+        render_metric("Precipitacion", f"{pp_anual:.0f}", "mm/año")
+    with kc3:
+        plh = heladas_s.get('periodo_libre_heladas_dias', 0)
+        render_metric("Periodo Libre Heladas", str(plh), "dias")
+    with kc4:
+        enso_s = secciones.get('enso', {})
+        render_metric("ENSO", enso_s.get('estado', 'N/D'),
+                      f"ONI={enso_s.get('oni_actual', 0):.2f}")
+    with kc5:
+        alt_info = av.get('altitud', {})
+        render_metric("Altitud", f"{av.get('alt', 0):.0f}m",
+                      alt_info.get('confianza', ''))
+
+    # -- Tabs avanzado --
+    av_tabs = st.tabs([
+        "Resumen", "Precipitacion", "Heladas", "Agro", "Pronostico"
+    ])
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    # Tab: Resumen
+    with av_tabs[0]:
+        st.markdown("#### Alertas y Resumen")
+        resumen = secciones.get('resumen', {})
+        for alerta in resumen.get('alertas', []):
+            st.markdown(f"- {alerta}")
+        st.caption(f"Fuentes utilizadas: {resumen.get('n_fuentes', 0)}")
+
+        # ENSO detail
+        if secciones.get('enso'):
+            enso_d = secciones['enso']
+            st.markdown("---")
+            st.markdown("#### Estado Climatico Actual")
+            ec1, ec2, ec3 = st.columns(3)
+            with ec1:
+                st.metric("ENSO (ONI)", f"{enso_d.get('oni_actual', 0):.2f}",
+                          delta=enso_d.get('estado', ''))
+            with ec2:
+                st.metric("PDO", f"{enso_d.get('pdo_3m', 0):.2f}")
+            with ec3:
+                st.metric("SOI", f"{enso_d.get('soi_3m', 0):.2f}")
+            if enso_d.get('interpretacion_agro'):
+                st.info(enso_d['interpretacion_agro'])
+
+        # Altitud detail
+        alt_d = av.get('altitud', {})
+        if alt_d.get('metodo'):
+            st.caption(f"Altitud estimada: {alt_d['metodo']}")
+
+        # Errores
+        if av.get('errores'):
+            with st.expander("Advertencias de procesamiento"):
+                for err in av['errores']:
+                    st.warning(err)
+
+    # Tab: Precipitacion
+    with av_tabs[1]:
+        precip_d = secciones.get('precipitacion', {})
+        if precip_d:
+            st.markdown(f"#### Precipitacion Mensual ({precip_d.get('fuente', '')})")
+            meses_av = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+            pp_vals = precip_d.get('mensual_mm', [0] * 12)
+
+            fig, ax = plt.subplots(figsize=(10, 4))
+            bars = ax.bar(range(12), pp_vals, color='#4FC3F7', edgecolor='#0277BD', lw=0.5)
+            for bar_, val_ in zip(bars, pp_vals):
+                if val_ > 5:
+                    ax.text(bar_.get_x() + bar_.get_width() / 2, bar_.get_height() + 1,
+                            f'{val_:.0f}', ha='center', va='bottom', fontsize=8)
+            ax.set_xticks(range(12))
+            ax.set_xticklabels(meses_av)
+            ax.set_ylabel('mm')
+            ax.set_title(f'Precipitacion Climatologica — {pp_anual:.0f} mm/año', fontsize=12,
+                         fontweight='bold', color='#2E7D32')
+            ax.grid(True, alpha=0.3, axis='y')
+            st.pyplot(fig)
+            plt.close()
+
+            # Validacion cruzada
+            validacion = precip_d.get('validacion', {})
+            if validacion:
+                st.markdown("#### Validacion Cruzada")
+                vc1, vc2, vc3 = st.columns(3)
+                with vc1:
+                    st.metric("CR2MET grillado", f"{validacion['cr2met_mm']:.0f} mm/año")
+                with vc2:
+                    st.metric("CR2 Estaciones (IDW)", f"{validacion['estaciones_mm']:.0f} mm/año")
+                with vc3:
+                    conc = validacion.get('concordancia', '')
+                    color_conc = '🟢' if conc == 'Buena' else '🟡' if conc == 'Moderada' else '🔴'
+                    st.metric("Concordancia", f"{color_conc} {conc}")
+                est_usadas = validacion.get('estaciones_usadas', [])
+                if est_usadas:
+                    st.caption(f"Estaciones: {', '.join(est_usadas[:5])}")
+
+            # Megasequia
+            mega = precip_d.get('megasequia', {})
+            if mega:
+                st.markdown("#### Tendencia Megasequia")
+                mg1, mg2, mg3 = st.columns(3)
+                with mg1:
+                    st.metric("1991-2005", f"{mega['periodo_1_mm']:.0f} mm/año")
+                with mg2:
+                    st.metric("2006-2020", f"{mega['periodo_2_mm']:.0f} mm/año")
+                with mg3:
+                    cambio = mega['cambio_pct']
+                    color_mg = '🔴' if cambio < -15 else '🟡' if cambio < -5 else '🟢'
+                    st.metric("Cambio", f"{color_mg} {cambio:+.0f}%")
+                st.caption(f"Interpretacion: {mega.get('interpretacion', '')} "
+                           "(Ref: Garreaud et al., 2024)")
+
+            # Balance hidrico
+            bh = secciones.get('balance_hidrico', {})
+            if bh:
+                st.markdown("---")
+                st.markdown("#### Balance Hidrico Simplificado")
+                fig, ax = plt.subplots(figsize=(10, 4))
+                x = range(12)
+                pp_bh = bh.get('precipitacion_mm', [0] * 12)
+                etp_bh = bh.get('etp_mm', [0] * 12)
+                width = 0.35
+                ax.bar([i - width / 2 for i in x], etp_bh, width, label='ETP (mm)',
+                       color='#FF8A65', edgecolor='#E64A19', lw=0.5)
+                ax.bar([i + width / 2 for i in x], pp_bh, width, label='Precipitacion (mm)',
+                       color='#4FC3F7', edgecolor='#0277BD', lw=0.5)
+                ax.set_xticks(x)
+                ax.set_xticklabels(meses_av)
+                ax.set_ylabel('mm/mes')
+                ax.legend()
+                ax.grid(True, alpha=0.3, axis='y')
+                ax.set_title('Balance Hidrico Mensual', fontsize=12,
+                             fontweight='bold', color='#2E7D32')
+                st.pyplot(fig)
+                plt.close()
+                st.metric("Deficit anual", f"{bh.get('deficit_anual_mm', 0):.0f} mm")
+                st.metric("Meses con estres hidrico", f"{bh.get('meses_estres', 0)}")
+        else:
+            st.warning("Datos de precipitacion no disponibles para este punto.")
+
+    # Tab: Heladas
+    with av_tabs[2]:
+        heladas_d = secciones.get('heladas', {})
+        if heladas_d:
+            st.markdown(f"#### Heladas — {heladas_d.get('fuente', '')}")
+            st.caption(f"Periodo: {heladas_d.get('periodo', 'N/D')}")
+
+            # KPIs heladas
+            hk1, hk2, hk3, hk4 = st.columns(4)
+            with hk1:
+                st.metric("Dias helada/año", f"{heladas_d.get('dias_helada_año_promedio', 0):.1f}")
+            with hk2:
+                st.metric("Tmin absoluta", f"{heladas_d.get('tmin_absoluta_C', 0):.1f}°C")
+            with hk3:
+                st.metric("PLH", f"{heladas_d.get('periodo_libre_heladas_dias', 0)} dias")
+            with hk4:
+                meses_sin = heladas_d.get('meses_sin_helada', [])
+                st.metric("Meses sin helada", f"{len(meses_sin)}")
+
+            # Efecto ENSO
+            if heladas_d.get('efecto_enso'):
+                factor = heladas_d.get('factor_enso', 'normal')
+                color_e = '🟢' if factor == 'reducido' else '🔴' if factor == 'aumentado' else '🟡'
+                st.info(f"{color_e} {heladas_d['efecto_enso']}")
+
+            # Tabla mensual
+            por_mes = heladas_d.get('por_mes', [])
+            if por_mes:
+                st.markdown("#### Perfil Mensual de Temperatura Minima y Heladas")
+                import pandas as pd
+                df_hel = pd.DataFrame(por_mes)
+                # Rename for display
+                col_rename = {
+                    'mes': 'Mes',
+                    'tmin_media_C': 'Tmin media (°C)',
+                    'tmin_min_abs_C': 'Min absoluta (°C)',
+                    'prob_helada_mensual': 'P(helada/mes) %',
+                    'dias_helada_año': 'Dias helada',
+                }
+                df_display = df_hel.rename(columns=col_rename)
+                cols_show = [v for v in col_rename.values() if v in df_display.columns]
+                st.dataframe(df_display[cols_show], use_container_width=True, hide_index=True)
+
+                # Chart
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+                meses_av = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+                tmin_vals = [m.get('tmin_media_C', 0) for m in por_mes]
+                prob_vals = [m.get('prob_helada_mensual', 0) for m in por_mes]
+
+                ax1.plot(range(12), tmin_vals, 'o-', color='#1565C0', lw=2.5, ms=7)
+                ax1.axhline(y=0, color='red', ls='--', lw=1, alpha=0.7)
+                ax1.fill_between(range(12), tmin_vals, alpha=0.15, color='#1565C0')
+                ax1.set_ylabel('Tmin media (°C)')
+                ax1.set_title('Perfil de Temperatura Minima y Probabilidad de Helada',
+                              fontsize=12, fontweight='bold', color='#2E7D32')
+                ax1.grid(True, alpha=0.3)
+
+                colors_prob = ['#E53935' if v > 50 else '#FB8C00' if v > 20
+                               else '#43A047' for v in prob_vals]
+                ax2.bar(range(12), prob_vals, color=colors_prob, edgecolor='white')
+                ax2.set_xticks(range(12))
+                ax2.set_xticklabels(meses_av)
+                ax2.set_ylabel('P(helada) %')
+                ax2.set_ylim(0, max(max(prob_vals) * 1.2, 10))
+                ax2.grid(True, alpha=0.3, axis='y')
+
+                plt.tight_layout()
+                st.pyplot(fig)
+                plt.close()
+        else:
+            st.warning("Datos de heladas no disponibles para este punto.")
+
+    # Tab: Agro (contexto agricola + riesgo por especie)
+    with av_tabs[3]:
+        agro = secciones.get('contexto_agro', {})
+        if agro:
+            st.markdown(f"#### Contexto Agricola — {agro.get('comuna_match', '')}")
+            st.metric("Superficie fruticola total", f"{agro.get('total_ha', 0):,.0f} ha")
+
+            top_esp = agro.get('top_especies', [])
+            if top_esp:
+                st.markdown("**Principales especies en la zona:**")
+                import pandas as pd
+                df_esp = pd.DataFrame(top_esp[:10], columns=['Especie', 'Superficie (ha)'])
+                st.dataframe(df_esp, use_container_width=True, hide_index=True)
+
+            # Heladas agronomicas
+            hel_agro = agro.get('heladas_agronomicas', [])
+            if hel_agro:
+                st.markdown("---")
+                st.markdown("#### Riesgo de Helada por Especie Cultivada")
+                st.caption("Probabilidad de daño en floracion (Sep/Oct) cruzada con umbrales por especie.")
+                import pandas as pd
+                df_ha = pd.DataFrame(hel_agro)
+                # Format columns
+                df_ha_display = df_ha.rename(columns={
+                    'especie': 'Especie',
+                    'superficie_ha': 'Sup. (ha)',
+                    'umbral_floracion': 'Umbral flor. (°C)',
+                    'p_dano_sep': 'P(daño Sep) %',
+                    'p_dano_oct': 'P(daño Oct) %',
+                    'riesgo': 'Riesgo',
+                })
+                st.dataframe(df_ha_display, use_container_width=True, hide_index=True)
+        else:
+            st.info("Contexto agricola no disponible para esta zona.")
+
+    # Tab: Pronostico
+    with av_tabs[4]:
+        pron = secciones.get('pronostico', {})
+        if pron:
+            st.markdown("#### Pronostico Estacional")
+            pk1, pk2, pk3 = st.columns(3)
+            with pk1:
+                outlook = pron.get('outlook', 'N/D')
+                color_out = '🟢' if outlook == 'LLUVIOSO' else '🔴' if outlook == 'SECO' else '🟡'
+                st.metric("Outlook", f"{color_out} {outlook}")
+            with pk2:
+                st.metric("Precip. esperada", f"{pron.get('precip_esperada_mm', 0):.0f} mm")
+            with pk3:
+                rango = pron.get('rango_mm', (0, 0))
+                st.metric("Rango", f"{rango[0]:.0f} - {rango[1]:.0f} mm")
+
+            st.caption(f"Factor ENSO: {pron.get('factor_enso', 1.0):.2f}")
+            if pron.get('nota'):
+                st.warning(pron['nota'])
+
+            # Monitoreo CHIRPS
+            mon = secciones.get('monitoreo', {})
+            if mon:
+                st.markdown("---")
+                st.markdown("#### Monitoreo Año en Curso (CHIRPS)")
+                mk1, mk2, mk3 = st.columns(3)
+                with mk1:
+                    st.metric("Acumulado observado",
+                              f"{mon.get('acum_observado_mm', 0):.0f} mm")
+                with mk2:
+                    st.metric("Climatologia",
+                              f"{mon.get('acum_climatologia_mm', 0):.0f} mm")
+                with mk3:
+                    ratio_m = mon.get('ratio', 0)
+                    clasif_m = mon.get('clasificacion', 'N/D')
+                    st.metric("Clasificacion", f"{clasif_m} ({ratio_m:.0%})")
+        else:
+            st.info("Pronostico estacional no disponible.")
+
+
+# =============================================================================
 # RESULTADOS: INFORME METEOROLOGICO (debajo del mapa, full width)
 # =============================================================================
 if show_meteo and st.session_state.get('processed') and st.session_state.comuna_match is not None:
@@ -1319,6 +1803,15 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
     analisis_texts = st.session_state['analisis_texts']
     winkler = st.session_state['winkler']
     fototermico = st.session_state['fototermico']
+    huglin = st.session_state.get('huglin', 0)
+    huglin_clase = st.session_state.get('huglin_clase', '')
+    noches_frias = st.session_state.get('noches_frias', 0)
+    noches_frias_clase = st.session_state.get('noches_frias_clase', '')
+    dias_libres_helada = st.session_state.get('dias_libres_helada', 0)
+    prob_helada = st.session_state.get('prob_helada', {})
+    helada_tardia = st.session_state.get('helada_tardia', {})
+    tipo_helada = st.session_state.get('tipo_helada', {})
+    porciones_frio = st.session_state.get('porciones_frio', 0)
     precip_inputs = st.session_state['precip_inputs']
     nombre_predio = st.session_state.get('nombre_predio', '')
 
@@ -1332,19 +1825,25 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
         st.caption(f"Predio: {nombre_predio}")
 
     # -- Metricas ---------------------------------------------------------
-    mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
+    mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
-        render_metric("T.Max Enero", f"{data_m.iloc[0]['T.MAX']}C")
+        render_metric("T.Max Enero", f"{data_m.iloc[0]['T.MAX']}°C", "")
     with mc2:
-        render_metric("T.Min Julio", f"{data_m.iloc[6]['T.MIN']}C")
+        render_metric("T.Min Julio", f"{data_m.iloc[6]['T.MIN']}°C", "")
     with mc3:
-        render_metric("Dias-Grado", f"{int(annual['DIAS GRADO'])}", "base 10C")
+        render_metric("Dias-Grado", f"{int(annual['DIAS GRADO'])}", "base 10°C anual")
     with mc4:
-        render_metric("Horas Frio", f"{int(annual['HRS.FRIO'])}", "<7C anual")
+        render_metric("Horas Frio", f"{int(annual['HRS.FRIO'])}", f"Porciones: {porciones_frio}")
+
+    mc5, mc6, mc7, mc8 = st.columns(4)
     with mc5:
-        render_metric("Winkler", f"{int(winkler)}", "dias-grado")
+        render_metric("Winkler", f"{int(winkler)}", "dias-grado Oct-Mar")
     with mc6:
-        render_metric("Fototermico", f"{int(fototermico)}", "indice")
+        render_metric("Huglin", f"{int(huglin)}", huglin_clase[:30] if huglin_clase else "")
+    with mc7:
+        render_metric("Noches Frias", f"{noches_frias}°C", noches_frias_clase[:35] if noches_frias_clase else "")
+    with mc8:
+        render_metric("Dias sin Helada", f"{dias_libres_helada}", "racha consecutiva")
 
     st.markdown("---")
 
@@ -1506,6 +2005,43 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
         st.pyplot(fig3)
         plt.close()
 
+        # --- Indices viticolas (Huglin + Noches Frias - Santibañez) ---
+        if huglin > 0 or noches_frias > 0:
+            st.markdown("---")
+            st.markdown("#### Indices Viticolas (Metodologia Santibañez)")
+            col_hug, col_nf = st.columns(2)
+            with col_hug:
+                if huglin > 0:
+                    st.metric("Indice de Huglin (IH)", f"{int(huglin)}")
+                    if huglin_clase:
+                        st.markdown(f"**Clase termica:** {huglin_clase}")
+                    # Reference table
+                    huglin_ref = [
+                        {'Clase': 'Muy frio', 'IH': '< 1500', 'Variedades': 'No apto para vid'},
+                        {'Clase': 'Frio', 'IH': '1500-1800', 'Variedades': 'Pinot Noir, Chardonnay, Riesling'},
+                        {'Clase': 'Templado', 'IH': '1800-2100', 'Variedades': 'Cab. Sauvignon, Merlot, Sauvignon Blanc'},
+                        {'Clase': 'Templado calido', 'IH': '2100-2400', 'Variedades': 'Syrah, Carmenere, Malbec'},
+                        {'Clase': 'Calido', 'IH': '2400-3000', 'Variedades': 'Garnacha, Mourvedre, Pais'},
+                        {'Clase': 'Muy calido', 'IH': '> 3000', 'Variedades': 'Uva de mesa, pasas'},
+                    ]
+                    st.dataframe(pd.DataFrame(huglin_ref), use_container_width=True, hide_index=True)
+                    st.caption("Huglin (1978): indice heliotermico que complementa a Winkler. "
+                               "Usa Tmax y Tmed con coeficiente de largo del dia segun latitud.")
+            with col_nf:
+                if noches_frias > 0:
+                    st.metric("Indice de Noches Frias (IF)", f"{noches_frias:.1f} C")
+                    if noches_frias_clase:
+                        st.markdown(f"**Clase:** {noches_frias_clase}")
+                    nf_ref = [
+                        {'Clase': 'Noches muy frias', 'IF (C)': '< 12', 'Efecto': 'Maximo potencial aromatico'},
+                        {'Clase': 'Noches frias', 'IF (C)': '12-14', 'Efecto': 'Alto potencial aromatico'},
+                        {'Clase': 'Noches templadas', 'IF (C)': '14-18', 'Efecto': 'Potencial aromatico moderado'},
+                        {'Clase': 'Noches calidas', 'IF (C)': '> 18', 'Efecto': 'Bajo potencial aromatico'},
+                    ]
+                    st.dataframe(pd.DataFrame(nf_ref), use_container_width=True, hide_index=True)
+                    st.caption("Tonietto & Carbonneau (2004): Tmin media de marzo. "
+                               "Indica potencial aromatico en vides por amplitud termica nocturna.")
+
     # -- Tab 3: Riesgos (Heladas + DG & Frio) ----------------------------
     with tabs[2]:
         # --- Heladas ---
@@ -1533,6 +2069,83 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
             ax.grid(True, alpha=0.3, axis='y')
         st.pyplot(fig)
         plt.close()
+
+        st.markdown("---")
+
+        # --- Probabilidad de helada mensual (Santibañez) ---
+        if prob_helada:
+            st.markdown("#### Probabilidad de Helada por Mes")
+            st.caption("Frecuencia historica de ocurrencia de al menos una helada (T<0C) en cada mes.")
+            meses_ph = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+                        'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+            ph_vals = [prob_helada.get(m_, 0) for m_ in meses_ph]
+            fig, ax = plt.subplots(figsize=(10, 3.5))
+            colors_ph = ['#E53935' if v > 50 else '#FB8C00' if v > 20
+                         else '#43A047' for v in ph_vals]
+            bars = ax.bar(range(12), ph_vals, color=colors_ph, edgecolor='white', lw=0.5)
+            for bar_, val_ in zip(bars, ph_vals):
+                if val_ > 0:
+                    ax.text(bar_.get_x() + bar_.get_width() / 2, bar_.get_height() + 1,
+                            f'{val_:.0f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
+            ax.set_xticks(range(12))
+            ax.set_xticklabels(meses_lbl)
+            ax.set_ylabel('Probabilidad (%)')
+            ax.set_ylim(0, max(max(ph_vals) * 1.15, 10))
+            ax.axhline(y=50, color='red', ls='--', lw=0.8, alpha=0.5)
+            ax.grid(True, alpha=0.3, axis='y')
+            ax.set_title(f'Probabilidad de Helada Mensual -- {nombre_match}', fontsize=12,
+                         fontweight='bold', color='#2E7D32')
+            st.pyplot(fig)
+            plt.close()
+
+        # --- Helada tardia y tipo ---
+        col_ht, col_th = st.columns(2)
+        with col_ht:
+            if helada_tardia:
+                st.markdown("#### Helada Tardia (Sep-Nov)")
+                alerta_txt = helada_tardia.get('alerta', 'Sin datos')
+                nivel_ = helada_tardia.get('nivel', '')
+                color_al = {'rojo': '🔴', 'amarillo': '🟡', 'verde': '🟢'}.get(nivel_, '⚪')
+                st.markdown(f"**{color_al} {alerta_txt}**")
+                por_mes_ = helada_tardia.get('por_mes', {})
+                ht_data = []
+                for mes_ in ['SEP', 'OCT', 'NOV']:
+                    dias_ = por_mes_.get(mes_, 0)
+                    ht_data.append({'Mes': mes_, 'Dias con helada': f'{dias_}'})
+                total_ = helada_tardia.get('total', 0)
+                ht_data.append({'Mes': '**Total**', 'Dias con helada': f'**{total_}**'})
+                st.dataframe(pd.DataFrame(ht_data), use_container_width=True, hide_index=True)
+                st.caption("Heladas en primavera afectan floracion y cuaja de frutales.")
+            else:
+                st.markdown("#### Helada Tardia (Sep-Nov)")
+                st.info("Sin datos suficientes para calcular helada tardia.")
+
+        with col_th:
+            if tipo_helada:
+                st.markdown("#### Tipo de Helada")
+                total_rad = tipo_helada.get('radiativa', 0)
+                total_adv = tipo_helada.get('advectiva', 0)
+                total_th = tipo_helada.get('total', 0)
+                if total_th > 0:
+                    st.markdown(f"**Total heladas:** {total_th} dias "
+                                f"({total_rad} radiativas, {total_adv} advectivas)")
+                    por_mes_th = tipo_helada.get('por_mes', {})
+                    if por_mes_th:
+                        th_data = []
+                        for mes_, counts_ in por_mes_th.items():
+                            th_data.append({
+                                'Mes': mes_,
+                                'Radiativa': counts_.get('radiativa', 0),
+                                'Advectiva': counts_.get('advectiva', 0),
+                            })
+                        st.dataframe(pd.DataFrame(th_data), use_container_width=True, hide_index=True)
+                    st.caption("**Radiativa**: cielo despejado, viento calmo, inversion termica. "
+                               "**Advectiva**: masa de aire frio, viento >2 m/s.")
+                else:
+                    st.info("Sin heladas registradas en el periodo.")
+            else:
+                st.markdown("#### Tipo de Helada")
+                st.info("Sin datos suficientes para clasificar tipo de helada.")
 
         st.markdown("---")
 
@@ -1570,6 +2183,37 @@ if show_meteo and st.session_state.get('processed') and st.session_state.comuna_
                          fontweight='bold')
             st.pyplot(fig)
             plt.close()
+
+        # --- Porciones de frio (Dynamic Chill Portions - Fishman 1987) ---
+        if porciones_frio and porciones_frio > 0:
+            st.markdown("---")
+            st.markdown("#### Porciones de Frio (Dynamic Chill Portions)")
+            st.caption("Modelo de Fishman et al. (1987): acumulacion irreversible de frio "
+                       "invernal (May-Ago). Mas preciso que horas de frio para especies "
+                       "como cerezo, manzano y arandano.")
+            col_pf1, col_pf2 = st.columns([1, 2])
+            with col_pf1:
+                st.metric("Porciones acumuladas", f"{porciones_frio:.1f}")
+                if porciones_frio >= 70:
+                    st.success("Alto: cerezo, manzano, peral OK")
+                elif porciones_frio >= 50:
+                    st.info("Medio: durazno, ciruela, arandano OK")
+                elif porciones_frio >= 30:
+                    st.warning("Bajo: solo especies de bajo requerimiento")
+                else:
+                    st.error("Muy bajo: insuficiente para frutales de hoja caduca")
+            with col_pf2:
+                ref_data = [
+                    {'Especie': 'Cerezo', 'Porciones req.': '60-80', 'Cumple': '✅' if porciones_frio >= 60 else '❌'},
+                    {'Especie': 'Manzano', 'Porciones req.': '50-70', 'Cumple': '✅' if porciones_frio >= 50 else '❌'},
+                    {'Especie': 'Peral', 'Porciones req.': '45-65', 'Cumple': '✅' if porciones_frio >= 45 else '❌'},
+                    {'Especie': 'Durazno', 'Porciones req.': '30-55', 'Cumple': '✅' if porciones_frio >= 30 else '❌'},
+                    {'Especie': 'Ciruela', 'Porciones req.': '35-50', 'Cumple': '✅' if porciones_frio >= 35 else '❌'},
+                    {'Especie': 'Arandano', 'Porciones req.': '20-40', 'Cumple': '✅' if porciones_frio >= 20 else '❌'},
+                    {'Especie': 'Nogal', 'Porciones req.': '40-60', 'Cumple': '✅' if porciones_frio >= 40 else '❌'},
+                    {'Especie': 'Vid', 'Porciones req.': '10-25', 'Cumple': '✅' if porciones_frio >= 10 else '❌'},
+                ]
+                st.dataframe(pd.DataFrame(ref_data), use_container_width=True, hide_index=True)
 
     # -- Tab 4: Cultivos (Bioclimatico + Plagas + Costos) -----------------
     with tabs[3]:

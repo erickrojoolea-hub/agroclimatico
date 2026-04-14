@@ -83,9 +83,10 @@ def parse_pvsyst_csv(filepath_or_buffer):
     return df
 
 
-def calc_monthly_climate(df, localidad="default", precip_custom=None, hr_custom=None, lat=-33.4):
+def calc_monthly_climate(df, localidad="default", precip_custom=None, hr_custom=None, lat=-33.4, alt=200.0):
     """
-    Calcula las 17+ variables mensuales del informe Santibáñez.
+    Calcula las 17+ variables mensuales del informe agroclimático.
+    Usa Penman-Monteith FAO-56 como método principal de ETP.
 
     Args:
         df: DataFrame con datos horarios PVsyst
@@ -93,6 +94,7 @@ def calc_monthly_climate(df, localidad="default", precip_custom=None, hr_custom=
         precip_custom: lista 12 valores mensuales de precipitación (mm), override
         hr_custom: lista 12 valores mensuales de humedad relativa (%), override
         lat: latitud para cálculo ETP
+        alt: altitud m.s.n.m. para Penman-Monteith
 
     Returns:
         DataFrame con variables mensuales + fila anual
@@ -162,24 +164,34 @@ def calc_monthly_climate(df, localidad="default", precip_custom=None, hr_custom=
         # Precipitación
         precipit = precip[m - 1]
 
-        # ETP Hargreaves (simplificada, usando radiación solar)
-        # ETP = 0.0023 * Ra * (T_med + 17.8) * (T_max - T_min)^0.5
-        # Ra en mm/día equivalente de radiación extraterrestre
-        # Alternativa: usar radiación medida
-        # ETP Turc: ETP = 0.013 * (T_med / (T_med + 15)) * (Rs + 50) * K
-        # Usamos Hargreaves modificado con radiación medida
         n_days = len(t_max_daily)
         delta_t = max(t_max - t_min, 0.1)
 
-        # Radiación extraterrestre aproximada (mm/día)
-        # Rs en MJ/m2/día = ghi_mean * 3600 / 1e6
+        # Radiación solar en MJ/m²/día
         rs_mj = ghi_mean * 3600 / 1e6
 
-        # ETP Hargreaves: ETP = 0.0023 * (Tmean + 17.8) * (Tmax-Tmin)^0.5 * Ra
-        # Usando Rs como proxy de Ra con factor de corrección
-        ra_est = rs_mj / 0.5 if rs_mj > 0 else 5.0  # Rs ≈ 0.5 * Ra aprox
-        etp_daily = 0.0023 * (t_med + 17.8) * (delta_t ** 0.5) * ra_est
-        etp_month = etp_daily * n_days
+        # Viento medio mensual
+        wind_m = mdf['WindVel'].mean() if 'WindVel' in mdf.columns else 2.0
+
+        # Día del año central del mes (para Penman-Monteith)
+        doy_mid = sum([0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334][m-1:m]) + 15
+
+        # ETP: Penman-Monteith FAO-56 (método principal) con fallback Hargreaves
+        try:
+            lat_rad = math.radians(lat)
+            etp_month = penman_monteith_fao56_monthly(
+                t_max=t_max, t_min=t_min, t_med=t_med,
+                hr=h_relat, u2=wind_m, rs_mj=rs_mj,
+                lat_rad=lat_rad, alt=alt,
+                n_days=n_days, doy_mid=doy_mid,
+            )
+            etp_method = "PM-FAO56"
+        except Exception:
+            # Fallback: Hargreaves
+            ra_est = rs_mj / 0.5 if rs_mj > 0 else 5.0
+            etp_daily = 0.0023 * (t_med + 17.8) * (delta_t ** 0.5) * ra_est
+            etp_month = etp_daily * n_days
+            etp_method = "Hargreaves"
 
         # Déficit y excedente hídrico
         def_hidr = max(etp_month - precipit, 0)
@@ -376,6 +388,321 @@ def calc_horas_frescor_madurez(df):
     """Horas con T<10°C entre febrero y marzo."""
     feb_mar = df[df['month'].isin([2, 3])]
     return int((feb_mar['T_amb'] < 10).sum())
+
+
+# ── Nuevas variables Santibáñez / FAO-56 / Atlas Agroclimático ──────────────
+
+def penman_monteith_fao56_monthly(t_max, t_min, t_med, hr, u2, rs_mj, lat_rad, alt, n_days, doy_mid):
+    """
+    ETP Penman-Monteith FAO-56 mensual (mm/mes).
+    Basado en Allen et al. (1998), estándar FAO.
+
+    Args:
+        t_max, t_min, t_med: temperaturas media del mes (°C)
+        hr: humedad relativa media (%)
+        u2: velocidad del viento a 2m (m/s)
+        rs_mj: radiación solar incidente diaria (MJ/m²/día) = GHI
+        lat_rad: latitud en radianes
+        alt: altitud m s.n.m.
+        n_days: días del mes
+        doy_mid: día del año central del mes
+    """
+    from math import exp, cos, sin, acos, tan, sqrt, pi
+
+    # Presión atmosférica
+    P = 101.3 * ((293 - 0.0065 * alt) / 293) ** 5.26
+
+    # Constante psicrométrica
+    gamma = 0.000665 * P
+
+    # Presión de vapor
+    es = 0.6108 * exp(17.27 * t_med / (t_med + 237.3))
+    ea = es * hr / 100.0
+
+    # Pendiente curva presión-temperatura
+    delta = 4098 * es / (t_med + 237.3) ** 2
+
+    # Radiación extraterrestre
+    dr = 1 + 0.033 * cos(2 * pi * doy_mid / 365)
+    decl = 0.409 * sin(2 * pi * doy_mid / 365 - 1.39)
+
+    ws_arg = -tan(lat_rad) * tan(decl)
+    ws_arg = max(-1.0, min(1.0, ws_arg))
+    ws = acos(ws_arg)
+
+    Ra = (24 * 60 / pi) * 0.0820 * dr * (
+        ws * sin(lat_rad) * sin(decl) + cos(lat_rad) * cos(decl) * sin(ws)
+    )
+    if Ra <= 0:
+        Ra = 0.1
+
+    # Radiación cielo despejado
+    Rso = (0.75 + 2e-5 * alt) * Ra
+    if Rso <= 0:
+        Rso = 0.1
+
+    # Radiación neta onda corta
+    Rns = (1 - 0.23) * rs_mj
+
+    # Radiación neta onda larga
+    sigma = 4.903e-9
+    Tk = t_med + 273.16
+    rs_ratio = min(rs_mj / Rso, 1.0)
+    Rnl = sigma * Tk**4 * (0.34 - 0.14 * sqrt(max(ea, 0.01))) * (1.35 * rs_ratio - 0.35)
+
+    # Radiación neta
+    Rn = Rns - Rnl
+    G = 0  # Para períodos mensuales
+
+    # ETo diaria
+    denom = delta + gamma * (1 + 0.34 * u2)
+    if denom == 0:
+        return 0
+    ETo = (0.408 * delta * (Rn - G) + gamma * 900 / (t_med + 273) * u2 * (es - ea)) / denom
+
+    return max(ETo, 0) * n_days
+
+
+def calc_porciones_frio(df):
+    """
+    Modelo dinámico de porciones de frío (Fishman et al., 1987).
+    Complementa las horas de frío simples. Más preciso para cerezo y manzano.
+    Período: mayo a agosto.
+
+    Returns: porciones de frío acumuladas (float)
+    """
+    from math import exp
+
+    # Filtrar mayo a agosto
+    winter = df[df['month'].isin([5, 6, 7, 8])].sort_values('datetime')
+    temps = winter['T_amb'].values
+
+    # Parámetros del modelo
+    e0 = 4153.5
+    e1 = 12888.8
+    a0 = 1.395e5
+    a1 = 2.567e18
+
+    intermediario = 0.0
+    porciones = 0.0
+
+    for T_celsius in temps:
+        Tk = T_celsius + 273.0
+        if Tk <= 0:
+            continue
+
+        k0 = a0 * exp(-e0 / Tk)
+        k1 = a1 * exp(-e1 / Tk)
+
+        eq = k0 / (k0 + k1) if (k0 + k1) > 0 else 0
+        intermediario = eq - (eq - intermediario) * exp(-(k0 + k1))
+
+        if intermediario >= 1.0:
+            porciones += intermediario
+            intermediario = 0
+
+    return round(porciones, 1)
+
+
+def calc_huglin(df, lat):
+    """
+    Índice heliotérmico de Huglin.
+    Período: Oct 1 - Mar 31 (hemisferio sur).
+    Complementa Winkler; incorpora amplitud térmica diaria.
+
+    Returns: (HI, clase_str)
+    """
+    abs_lat = abs(lat)
+    if abs_lat <= 40:
+        d = 1.0
+    elif abs_lat <= 42:
+        d = 1.02
+    elif abs_lat <= 44:
+        d = 1.03
+    elif abs_lat <= 46:
+        d = 1.04
+    else:
+        d = 1.06
+
+    meses_huglin = [10, 11, 12, 1, 2, 3]
+    HI = 0
+
+    for m in meses_huglin:
+        mdf = df[df['month'] == m]
+        daily = mdf.groupby('date')
+        for _, day_data in daily:
+            t_max = day_data['T_amb'].max()
+            t_med = day_data['T_amb'].mean()
+            contrib = max(((t_med - 10) + (t_max - 10)) / 2, 0) * d
+            HI += contrib
+
+    HI = round(HI, 0)
+
+    if HI < 1500:
+        clase = "Muy frío (no viable)"
+    elif HI < 1800:
+        clase = "Frío (blancos aromáticos)"
+    elif HI < 2100:
+        clase = "Templado (Pinot Noir, Chardonnay)"
+    elif HI < 2400:
+        clase = "Templado-cálido (Cabernet, Merlot)"
+    elif HI < 3000:
+        clase = "Cálido (Syrah, Garnacha)"
+    else:
+        clase = "Muy cálido"
+
+    return HI, clase
+
+
+def calc_noches_frias(df):
+    """
+    Índice de Noches Frías (Cool Night Index - IF).
+    Tmin media de marzo. Indicador de potencial aromático en vides.
+
+    Returns: (IF_value, clase_str)
+    """
+    mar = df[df['month'] == 3]
+    daily_min = mar.groupby('date')['T_amb'].min()
+    IF = round(daily_min.mean(), 1)
+
+    if IF < 12:
+        clase = "Noches muy frías (alta concentración aromática)"
+    elif IF < 14:
+        clase = "Noches frías (buena acidez)"
+    elif IF < 18:
+        clase = "Noches templadas (equilibrado)"
+    else:
+        clase = "Noches cálidas (riesgo pérdida acidez)"
+
+    return IF, clase
+
+
+def calc_dias_libres_helada(df):
+    """
+    Días libres de helada: racha más larga de días consecutivos sin T < 0°C.
+    Variable estándar del Atlas Agroclimático de Chile.
+
+    Returns: int (número de días de la racha más larga)
+    """
+    daily = df.groupby('date')
+    t_min_daily = daily['T_amb'].min().sort_index()
+
+    max_racha = 0
+    racha = 0
+    for tmin in t_min_daily.values:
+        if tmin >= 0:
+            racha += 1
+            max_racha = max(max_racha, racha)
+        else:
+            racha = 0
+
+    return max_racha
+
+
+def calc_prob_helada_mensual(df):
+    """
+    Probabilidad de helada por mes (%).
+    Más útil que el conteo absoluto.
+
+    Returns: dict {mes: probabilidad %}
+    """
+    month_names = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+                   'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+    result = {}
+    for m in range(1, 13):
+        mdf = df[df['month'] == m]
+        daily = mdf.groupby('date')
+        t_min_daily = daily['T_amb'].min()
+        n_days = len(t_min_daily)
+        n_frost = (t_min_daily < 0).sum()
+        prob = round(100 * n_frost / n_days, 1) if n_days > 0 else 0
+        result[month_names[m - 1]] = prob
+    return result
+
+
+def calc_helada_tardia(df):
+    """
+    Helada tardía: días con Tmin < 0°C en Sep, Oct, Nov.
+    Es el riesgo productivo más relevante para frutales.
+
+    Returns: dict con total, por_mes, y alerta
+    """
+    meses = {9: 'SEP', 10: 'OCT', 11: 'NOV'}
+    total = 0
+    por_mes = {}
+    for m, name in meses.items():
+        mdf = df[df['month'] == m]
+        daily = mdf.groupby('date')
+        t_min_daily = daily['T_amb'].min()
+        n_frost = int((t_min_daily < 0).sum())
+        por_mes[name] = n_frost
+        total += n_frost
+
+    if total == 0:
+        alerta = "Sin riesgo de helada tardía"
+        nivel = "verde"
+    elif total <= 3:
+        alerta = "Riesgo bajo de helada tardía"
+        nivel = "amarillo"
+    else:
+        alerta = f"Riesgo alto: {total} días con helada tardía (Sep-Nov)"
+        nivel = "rojo"
+
+    return {
+        "total": total,
+        "por_mes": por_mes,
+        "alerta": alerta,
+        "nivel": nivel,
+    }
+
+
+def calc_tipo_helada(df):
+    """
+    Clasificación de heladas por tipo (radiativa vs advectiva).
+    Basado en metodología Santibáñez/Infodep.
+
+    Helada radiativa: noches despejadas, sin viento (WindVel < 1.5 m/s),
+    día previo con GHI alto.
+    Helada advectiva: masa de aire polar, con viento.
+
+    Returns: dict con conteo por tipo y mes
+    """
+    daily = df.groupby('date')
+    t_min_daily = daily['T_amb'].min()
+    wind_night = df[df['hour'].isin([0, 1, 2, 3, 4, 5, 6])].groupby('date')['WindVel'].mean()
+    # GHI del día previo (proxy de nubosidad)
+    ghi_daily = daily['GHI'].sum()
+
+    frost_days = t_min_daily[t_min_daily < 0].index
+    radiativa = 0
+    advectiva = 0
+    por_mes = {}
+
+    for day in frost_days:
+        month = day.month if hasattr(day, 'month') else int(str(day)[5:7])
+        mes_name = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+                     'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'][month - 1]
+
+        w = wind_night.get(day, 2.0)
+        g = ghi_daily.get(day, 3000)
+
+        if w < 1.5 and g > 2000:  # Noche calma + día despejado
+            radiativa += 1
+            tipo = "radiativa"
+        else:
+            advectiva += 1
+            tipo = "advectiva"
+
+        if mes_name not in por_mes:
+            por_mes[mes_name] = {"radiativa": 0, "advectiva": 0}
+        por_mes[mes_name][tipo] += 1
+
+    return {
+        "radiativa": radiativa,
+        "advectiva": advectiva,
+        "total": radiativa + advectiva,
+        "por_mes": por_mes,
+    }
 
 
 # ── Tablas bioclimáticas por especie ─────────────────────────────────────────

@@ -4,3 +4,13 @@ __pycache__/
 *.pdf
 .DS_Store
 .claude/
+
+# Symlinks to local data (too large for cloud)
+BD_agro
+datos_geo
+datos_precipitacion
+
+# Large data files
+*.gpkg
+*.nc
+*.rar
