@@ -1793,6 +1793,38 @@ if show_avanzado and st.session_state.get('avanzado_processed') and st.session_s
     st.markdown("---")
     try:
         from avanzado_pdf_generator import generate_avanzado_pdf
+        # Recoger datos meteorológicos de session_state si están disponibles
+        _pdf_kwargs = {}
+        if 'monthly_df' in st.session_state and st.session_state['monthly_df'] is not None:
+            _mdf = st.session_state['monthly_df'].copy()
+            # Transponer: el PDF espera variables como index, meses como columnas
+            _data_rows = _mdf[_mdf['MES'] != 'ANUAL'].copy()
+            _anual_row = _mdf[_mdf['MES'] == 'ANUAL'].copy()
+            _cols_drop = ['MES', 'month_num', 'n_days']
+            _vars = [c for c in _data_rows.columns if c not in _cols_drop]
+            _month_names_raw = _data_rows['MES'].tolist()
+            _t = _data_rows[_vars].T
+            # Mapear nombres de mes a formato Titulo (ENE→Ene) para el PDF
+            _mes_map = {
+                'ENE': 'Ene', 'FEB': 'Feb', 'MAR': 'Mar', 'ABR': 'Abr',
+                'MAY': 'May', 'JUN': 'Jun', 'JUL': 'Jul', 'AGO': 'Ago',
+                'SEP': 'Sep', 'OCT': 'Oct', 'NOV': 'Nov', 'DIC': 'Dic',
+            }
+            _t.columns = [_mes_map.get(m, m) for m in _month_names_raw]
+            if len(_anual_row):
+                _t['Anual'] = _anual_row[_vars].values[0]
+            _pdf_kwargs['monthly_df'] = _t
+        for _k in ('dc_df', 'hel_df', 'bio_tables', 'analisis_texts'):
+            if _k in st.session_state and st.session_state[_k] is not None:
+                _pdf_kwargs[_k] = st.session_state[_k]
+        for _k, _def in [('winkler', 0), ('fototermico', 0),
+                          ('huglin', 0), ('huglin_clase', ''),
+                          ('noches_frias', 0), ('noches_frias_clase', ''),
+                          ('porciones_frio', 0)]:
+            _pdf_kwargs[_k] = st.session_state.get(_k, _def)
+        for _k in ('prob_helada', 'helada_tardia', 'tipo_helada'):
+            if _k in st.session_state and st.session_state[_k]:
+                _pdf_kwargs[_k] = st.session_state[_k]
         with st.spinner("Generando informe PDF avanzado..."):
             av_pdf_bytes = generate_avanzado_pdf(
                 localidad=av.get('comuna', f"{av['lat']:.4f}, {av['lon']:.4f}"),
@@ -1800,6 +1832,7 @@ if show_avanzado and st.session_state.get('avanzado_processed') and st.session_s
                 lon=av['lon'],
                 alt=av.get('alt', 0),
                 avanzado_report=av,
+                **_pdf_kwargs,
             )
         nombre_loc = av.get('comuna', 'punto').replace(' ', '_')
         st.download_button(

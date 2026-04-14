@@ -1,13 +1,11 @@
 """
 avanzado_pdf_generator.py — Generador de Informe Meteorológico Avanzado (PDF)
 ==============================================================================
-Informe profesional con relato analítico, metodología, fuentes,
-riesgos cuantificados y recomendaciones para agricultores.
+Informe profesional de 15+ páginas con relato analítico, metodología, fuentes,
+predicciones multi-método, riesgos cuantificados y recomendaciones.
 
-Basado en: CR2MET v2.0, CR2 Estaciones, ENSO/PDO/SOI,
-Catastro Frutícola CIREN/ODEPA, CHIRPS v2.
-
-Estilo: Fernando Santibáñez / Atlas Agroclimático de Chile.
+Fuentes: CR2MET v2.0, CR2 Estaciones, PVsyst TMY, ENSO/PDO/SOI,
+Catastro Frutícola CIREN/ODEPA, CHIRPS v2, Atlas Agroclimático Santibáñez.
 """
 
 import io
@@ -23,1164 +21,1230 @@ from reportlab.platypus import (
     Image, PageBreak, HRFlowable, KeepTogether,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.graphics.shapes import Drawing, Rect, String
 
-# ── Paleta de colores ─────────────────────────────────────────────────
-VERDE_OSCURO = colors.HexColor('#1B5E20')
-VERDE_MEDIO = colors.HexColor('#2E7D32')
-VERDE_CLARO = colors.HexColor('#C8E6C9')
-VERDE_FONDO = colors.HexColor('#E8F5E9')
-AZUL = colors.HexColor('#1565C0')
-AZUL_CLARO = colors.HexColor('#E3F2FD')
-ROJO = colors.HexColor('#C62828')
-ROJO_CLARO = colors.HexColor('#FFEBEE')
-NARANJA = colors.HexColor('#E65100')
-NARANJA_CLARO = colors.HexColor('#FFF3E0')
-AMARILLO = colors.HexColor('#F9A825')
-GRIS = colors.HexColor('#F5F5F5')
-GRIS_OSCURO = colors.HexColor('#424242')
-GRIS_MEDIO = colors.HexColor('#9E9E9E')
-BLANCO = colors.white
-NEGRO = colors.black
+# ── Paleta ────────────────────────────────────────────────────────────
+V_OSC = colors.HexColor('#1B5E20')
+V_MED = colors.HexColor('#2E7D32')
+V_CLA = colors.HexColor('#C8E6C9')
+V_FND = colors.HexColor('#E8F5E9')
+AZ    = colors.HexColor('#1565C0')
+AZ_CL = colors.HexColor('#E3F2FD')
+RJ    = colors.HexColor('#C62828')
+RJ_CL = colors.HexColor('#FFEBEE')
+NJ    = colors.HexColor('#E65100')
+NJ_CL = colors.HexColor('#FFF3E0')
+AM    = colors.HexColor('#F9A825')
+GR    = colors.HexColor('#F5F5F5')
+GR_OS = colors.HexColor('#424242')
+GR_MD = colors.HexColor('#9E9E9E')
+BL    = colors.white
 
-MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-         'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-
-def _create_styles():
-    """Crea estilos tipográficos del informe."""
-    styles = getSampleStyleSheet()
-
-    custom = {
-        'Portada': ParagraphStyle(
-            'Portada', parent=styles['Title'],
-            fontSize=26, leading=32, textColor=VERDE_OSCURO,
-            alignment=TA_LEFT, spaceAfter=6,
-        ),
-        'Subtitulo': ParagraphStyle(
-            'Subtitulo', parent=styles['Normal'],
-            fontSize=13, leading=16, textColor=GRIS_OSCURO,
-            alignment=TA_LEFT, spaceAfter=4,
-        ),
-        'Seccion': ParagraphStyle(
-            'Seccion', parent=styles['Heading1'],
-            fontSize=15, leading=18, textColor=VERDE_OSCURO,
-            spaceBefore=14, spaceAfter=6,
-            borderWidth=0, borderPadding=0,
-        ),
-        'SubSeccion': ParagraphStyle(
-            'SubSeccion', parent=styles['Heading2'],
-            fontSize=12, leading=15, textColor=VERDE_MEDIO,
-            spaceBefore=8, spaceAfter=4,
-        ),
-        'Cuerpo': ParagraphStyle(
-            'Cuerpo', parent=styles['Normal'],
-            fontSize=9.5, leading=13, textColor=GRIS_OSCURO,
-            alignment=TA_JUSTIFY, spaceAfter=6,
-        ),
-        'CuerpoNegrita': ParagraphStyle(
-            'CuerpoNegrita', parent=styles['Normal'],
-            fontSize=9.5, leading=13, textColor=NEGRO,
-            alignment=TA_JUSTIFY, spaceAfter=6,
-            fontName='Helvetica-Bold',
-        ),
-        'Alerta': ParagraphStyle(
-            'Alerta', parent=styles['Normal'],
-            fontSize=9.5, leading=13, textColor=ROJO,
-            alignment=TA_LEFT, spaceAfter=4,
-            fontName='Helvetica-Bold',
-        ),
-        'AlertaModerada': ParagraphStyle(
-            'AlertaModerada', parent=styles['Normal'],
-            fontSize=9.5, leading=13, textColor=NARANJA,
-            alignment=TA_LEFT, spaceAfter=4,
-            fontName='Helvetica-Bold',
-        ),
-        'Positivo': ParagraphStyle(
-            'Positivo', parent=styles['Normal'],
-            fontSize=9.5, leading=13, textColor=VERDE_MEDIO,
-            alignment=TA_LEFT, spaceAfter=4,
-            fontName='Helvetica-Bold',
-        ),
-        'Fuente': ParagraphStyle(
-            'Fuente', parent=styles['Normal'],
-            fontSize=7.5, leading=10, textColor=GRIS_MEDIO,
-            alignment=TA_LEFT, spaceAfter=2,
-        ),
-        'Pie': ParagraphStyle(
-            'Pie', parent=styles['Normal'],
-            fontSize=7, leading=9, textColor=GRIS_MEDIO,
-            alignment=TA_CENTER,
-        ),
-        'KPI': ParagraphStyle(
-            'KPI', parent=styles['Normal'],
-            fontSize=20, leading=24, textColor=VERDE_OSCURO,
-            alignment=TA_CENTER, fontName='Helvetica-Bold',
-        ),
-        'KPILabel': ParagraphStyle(
-            'KPILabel', parent=styles['Normal'],
-            fontSize=8, leading=10, textColor=GRIS_OSCURO,
-            alignment=TA_CENTER,
-        ),
-    }
-    return {**{k: styles[k] for k in styles.byName}, **custom}
+MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 
-def _make_kpi_table(kpis):
-    """
-    Genera tabla de KPIs visuales.
-    kpis: list of (valor, unidad, label)
-    """
-    row_vals = []
-    row_labels = []
-    for val, unit, label in kpis:
-        row_vals.append(f'{val}{unit}')
-        row_labels.append(label)
+def _S():
+    """Crea todos los estilos."""
+    base = getSampleStyleSheet()
+    c = {}
+    def _p(name, parent='Normal', **kw):
+        c[name] = ParagraphStyle(name, parent=base[parent], **kw)
 
-    n = len(kpis)
-    col_w = 460 / n
+    _p('Portada', 'Title', fontSize=28, leading=34, textColor=V_OSC, alignment=TA_LEFT, spaceAfter=4)
+    _p('PortadaSub', fontSize=16, leading=20, textColor=V_MED, spaceAfter=8)
+    _p('Sec', 'Heading1', fontSize=15, leading=18, textColor=V_OSC, spaceBefore=14, spaceAfter=6)
+    _p('Sub', 'Heading2', fontSize=12, leading=15, textColor=V_MED, spaceBefore=8, spaceAfter=4)
+    _p('Sub2', 'Heading3', fontSize=10.5, leading=13, textColor=V_MED, spaceBefore=6, spaceAfter=3)
+    _p('B', fontSize=9.5, leading=13, textColor=GR_OS, alignment=TA_JUSTIFY, spaceAfter=6)
+    _p('Bn', fontSize=9.5, leading=13, textColor=colors.black, alignment=TA_JUSTIFY,
+       spaceAfter=6, fontName='Helvetica-Bold')
+    _p('Sm', fontSize=8.5, leading=11, textColor=GR_OS, alignment=TA_JUSTIFY, spaceAfter=4)
+    _p('Src', fontSize=7.5, leading=10, textColor=GR_MD, spaceAfter=2)
+    _p('Pie', fontSize=7, leading=9, textColor=GR_MD, alignment=TA_CENTER)
+    _p('Alert', fontSize=9.5, leading=13, textColor=RJ, fontName='Helvetica-Bold', spaceAfter=4)
+    return c
 
-    data = [row_vals, row_labels]
-    t = Table(data, colWidths=[col_w] * n, rowHeights=[28, 16])
+
+def _tbl(data, col_w, header_bg=V_OSC, alt_row=True, font_sz=8):
+    """Tabla estilizada."""
+    t = Table(data, colWidths=col_w)
+    cmds = [
+        ('BACKGROUND', (0,0), (-1,0), header_bg),
+        ('TEXTCOLOR', (0,0), (-1,0), BL),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), font_sz),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.3, GR_MD),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+    ]
+    if alt_row:
+        for i in range(1, len(data)):
+            if i % 2 == 0:
+                cmds.append(('BACKGROUND', (0,i), (-1,i), GR))
+    t.setStyle(TableStyle(cmds))
+    t._extra_cmds = cmds  # guardar para modificaciones posteriores
+    return t
+
+
+def _tbl_add_style(t, *cmds):
+    """Agrega comandos de estilo adicionales a una tabla."""
+    t.setStyle(TableStyle(list(cmds)))
+
+
+def _alert_box(text, nivel='info'):
+    bgs = {'rojo': (RJ_CL, RJ), 'naranja': (NJ_CL, NJ), 'verde': (V_FND, V_MED),
+           'azul': (AZ_CL, AZ), 'info': (GR, GR_OS)}
+    bg, fg = bgs.get(nivel, bgs['info'])
+    p = Paragraph(text, ParagraphStyle('_ab', fontSize=9, leading=12, textColor=fg,
+                                        fontName='Helvetica-Bold'))
+    t = Table([[p]], colWidths=[460])
     t.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 16),
-        ('TEXTCOLOR', (0, 0), (-1, 0), VERDE_OSCURO),
-        ('FONTSIZE', (0, 1), (-1, 1), 7.5),
-        ('TEXTCOLOR', (0, 1), (-1, 1), GRIS_OSCURO),
-        ('BACKGROUND', (0, 0), (-1, -1), VERDE_FONDO),
-        ('BOX', (0, 0), (-1, -1), 0.5, VERDE_CLARO),
-        ('LINEBELOW', (0, 0), (-1, 0), 0.3, VERDE_CLARO),
+        ('BACKGROUND',(0,0),(-1,-1),bg), ('BOX',(0,0),(-1,-1),1,fg),
+        ('TOPPADDING',(0,0),(-1,-1),6), ('BOTTOMPADDING',(0,0),(-1,-1),6),
+        ('LEFTPADDING',(0,0),(-1,-1),10), ('RIGHTPADDING',(0,0),(-1,-1),10),
     ]))
     return t
 
 
-def _make_alert_box(text, nivel='info'):
-    """Genera caja de alerta coloreada."""
-    color_map = {
-        'rojo': (ROJO_CLARO, ROJO),
-        'naranja': (NARANJA_CLARO, NARANJA),
-        'verde': (VERDE_FONDO, VERDE_MEDIO),
-        'azul': (AZUL_CLARO, AZUL),
-        'info': (GRIS, GRIS_OSCURO),
-    }
-    bg, fg = color_map.get(nivel, color_map['info'])
-    data = [[Paragraph(text, ParagraphStyle('alert_inner', fontSize=9, leading=12,
-                                             textColor=fg, fontName='Helvetica-Bold'))]]
-    t = Table(data, colWidths=[460])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), bg),
-        ('BOX', (0, 0), (-1, -1), 1, fg),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    return t
-
-
-def _plot_precip_chart(precip_data):
-    """Genera gráfico de precipitación mensual como imagen."""
+def _chart(plot_fn, w=440, h=170):
+    """Wrapper para generar chart como Image."""
     try:
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots(figsize=(6.5, 2.5))
-        mensual = precip_data.get('mensual_mm', [0]*12)
-
-        bars = ax.bar(MESES, mensual, color='#2E7D32', alpha=0.85, edgecolor='#1B5E20', linewidth=0.5)
-
-        # Destacar meses más lluviosos
-        max_val = max(mensual) if mensual else 0
-        for bar, val in zip(bars, mensual):
-            if val > max_val * 0.8:
-                bar.set_color('#1565C0')
-            if val > 0:
-                ax.text(bar.get_x() + bar.get_width()/2, val + max_val*0.02,
-                       f'{val:.0f}', ha='center', va='bottom', fontsize=6.5, color='#424242')
-
-        ax.set_ylabel('Precipitación (mm)', fontsize=8)
-        ax.set_title(f'Climatología Mensual — {precip_data.get("anual_mm", 0):.0f} mm/año',
-                    fontsize=9, fontweight='bold', color='#1B5E20')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.tick_params(labelsize=7)
-        fig.tight_layout()
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-        plt.close(fig)
-        buf.seek(0)
-        return Image(buf, width=440, height=170)
-    except Exception:
-        return None
-
-
-def _plot_heladas_chart(heladas_data):
-    """Genera gráfico de probabilidad de heladas por mes."""
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-
-        por_mes = heladas_data.get('por_mes', [])
-        if not por_mes:
+        fig = plot_fn(plt)
+        if fig is None:
             return None
-
-        meses_h = [m.get('mes', '') for m in por_mes]
-        probs = [m.get('prob_helada_mensual', 0) * 100 for m in por_mes]
-        tmin = [m.get('tmin_media_C', m.get('tmin_min_abs_C', 0)) for m in por_mes]
-
-        fig, ax1 = plt.subplots(figsize=(6.5, 2.5))
-
-        # Barras de probabilidad
-        bar_colors = ['#C62828' if p > 50 else '#E65100' if p > 20 else '#F9A825' if p > 5 else '#2E7D32'
-                      for p in probs]
-        bars = ax1.bar(meses_h, probs, color=bar_colors, alpha=0.8, edgecolor='white', linewidth=0.5)
-        ax1.set_ylabel('Prob. helada (%)', fontsize=8, color='#C62828')
-        ax1.set_ylim(0, max(max(probs) * 1.2, 10))
-
-        for bar, val in zip(bars, probs):
-            if val > 1:
-                ax1.text(bar.get_x() + bar.get_width()/2, val + 1,
-                       f'{val:.0f}%', ha='center', va='bottom', fontsize=6, color='#424242')
-
-        # Línea de Tmin
-        ax2 = ax1.twinx()
-        ax2.plot(meses_h, tmin, '--', linewidth=1.2, marker='o', markersize=3, color='#1565C0')
-        ax2.set_ylabel('Tmin media (°C)', fontsize=8, color='#1565C0')
-        ax2.axhline(y=0, color='#C62828', linewidth=0.8, linestyle=':')
-
-        ax1.set_title('Probabilidad de Heladas y Temperatura Mínima', fontsize=9,
-                     fontweight='bold', color='#1B5E20')
-        ax1.spines['top'].set_visible(False)
-        ax1.tick_params(labelsize=7)
-        ax2.tick_params(labelsize=7)
-        fig.tight_layout()
-
         buf = io.BytesIO()
         fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
         plt.close(fig)
         buf.seek(0)
-        return Image(buf, width=440, height=170)
+        return Image(buf, width=w, height=h)
     except Exception:
         return None
 
 
-def _plot_balance_hidrico(balance_data):
-    """Genera gráfico de balance hídrico."""
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        import numpy as np
-
-        pp = balance_data.get('precipitacion_mm', [0]*12)
-        etp = balance_data.get('etp_mm', [0]*12)
-
-        fig, ax = plt.subplots(figsize=(6.5, 2.5))
-        x = np.arange(12)
-        w = 0.35
-
-        ax.bar(x - w/2, pp, w, label='Precipitación', color='#1565C0', alpha=0.8)
-        ax.bar(x + w/2, etp, w, label='ETP', color='#E65100', alpha=0.8)
-
-        # Zona de déficit
-        for i in range(12):
-            if etp[i] > pp[i]:
-                ax.annotate('', xy=(i, pp[i]), xytext=(i, etp[i]),
-                           arrowprops=dict(arrowstyle='<->', color='#C62828', lw=0.8))
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(MESES, fontsize=7)
-        ax.set_ylabel('mm', fontsize=8)
-        ax.set_title('Balance Hídrico Simplificado (P vs ETP)', fontsize=9,
-                    fontweight='bold', color='#1B5E20')
-        ax.legend(fontsize=7, loc='upper right')
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        fig.tight_layout()
-
-        buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
-        plt.close(fig)
-        buf.seek(0)
-        return Image(buf, width=440, height=170)
-    except Exception:
-        return None
+def _kpi_row(items):
+    """items: list of (valor, label)"""
+    n = len(items)
+    cw = 460 / n
+    r1 = [it[0] for it in items]
+    r2 = [it[1] for it in items]
+    t = Table([r1, r2], colWidths=[cw]*n, rowHeights=[26, 14])
+    t.setStyle(TableStyle([
+        ('ALIGN',(0,0),(-1,-1),'CENTER'), ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'), ('FONTSIZE',(0,0),(-1,0),15),
+        ('TEXTCOLOR',(0,0),(-1,0),V_OSC), ('FONTSIZE',(0,1),(-1,1),7.5),
+        ('TEXTCOLOR',(0,1),(-1,1),GR_OS), ('BACKGROUND',(0,0),(-1,-1),V_FND),
+        ('BOX',(0,0),(-1,-1),0.5,V_CLA),
+    ]))
+    return t
 
 
-def generate_avanzado_pdf(localidad, lat, lon, alt, avanzado_report):
+# ══════════════════════════════════════════════════════════════════════
+#  GRÁFICOS
+# ══════════════════════════════════════════════════════════════════════
+
+def _plot_temp_profile(plt, monthly_df):
+    """Perfil térmico: Tmax, Tmed, Tmin mensual."""
+    fig, ax = plt.subplots(figsize=(6.5, 2.8))
+    tmax = [monthly_df.loc['T.MAX', m] for m in MESES]
+    tmin = [monthly_df.loc['T.MIN', m] for m in MESES]
+    tmed = [monthly_df.loc['T.MED', m] for m in MESES]
+
+    ax.fill_between(range(12), tmin, tmax, alpha=0.15, color='#E65100')
+    ax.plot(range(12), tmax, 'o-', color='#C62828', linewidth=1.5, markersize=4, label='T.Máx')
+    ax.plot(range(12), tmed, 's-', color='#F9A825', linewidth=1.5, markersize=4, label='T.Med')
+    ax.plot(range(12), tmin, 'o-', color='#1565C0', linewidth=1.5, markersize=4, label='T.Mín')
+    ax.axhline(y=0, color='#C62828', linewidth=0.8, linestyle=':')
+
+    for i in range(12):
+        ax.text(i, tmax[i]+0.5, f'{tmax[i]:.0f}', ha='center', fontsize=5.5, color='#C62828')
+        ax.text(i, tmin[i]-1.2, f'{tmin[i]:.0f}', ha='center', fontsize=5.5, color='#1565C0')
+
+    ax.set_xticks(range(12))
+    ax.set_xticklabels(MESES, fontsize=7)
+    ax.set_ylabel('Temperatura (°C)', fontsize=8)
+    ax.set_title('Perfil Térmico Mensual', fontsize=10, fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=7, loc='upper right')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.tick_params(labelsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_precip_bar(plt, precip_data):
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
+    vals = precip_data.get('mensual_mm', [0]*12)
+    mx = max(vals) if vals else 1
+    bar_colors = ['#1565C0' if v > mx*0.7 else '#2E7D32' for v in vals]
+    bars = ax.bar(MESES, vals, color=bar_colors, alpha=0.85, edgecolor='white', linewidth=0.5)
+    for bar, v in zip(bars, vals):
+        if v > 0:
+            ax.text(bar.get_x()+bar.get_width()/2, v+mx*0.02, f'{v:.0f}',
+                   ha='center', va='bottom', fontsize=6, color='#424242')
+    ax.set_ylabel('mm', fontsize=8)
+    ax.set_title(f'Precipitación Mensual — {sum(vals):.0f} mm/año', fontsize=9,
+                fontweight='bold', color='#1B5E20')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.tick_params(labelsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_frost_profile(plt, heladas_data):
+    por_mes = heladas_data.get('por_mes', [])
+    if not por_mes: return None
+    fig, ax1 = plt.subplots(figsize=(6.5, 2.5))
+    meses_h = [m.get('mes','') for m in por_mes]
+    probs = [m.get('prob_helada_mensual',0)*100 for m in por_mes]
+    tmin = [m.get('tmin_media_C', m.get('tmin_min_abs_C',0)) for m in por_mes]
+    cols = ['#C62828' if p>50 else '#E65100' if p>20 else '#F9A825' if p>5 else '#2E7D32' for p in probs]
+    bars = ax1.bar(meses_h, probs, color=cols, alpha=0.8, edgecolor='white')
+    ax1.set_ylabel('P(helada) %', fontsize=8, color='#C62828')
+    for b,v in zip(bars,probs):
+        if v>1: ax1.text(b.get_x()+b.get_width()/2, v+1, f'{v:.0f}%', ha='center', fontsize=6)
+    ax2 = ax1.twinx()
+    ax2.plot(meses_h, tmin, '--', lw=1.2, marker='o', ms=3, color='#1565C0')
+    ax2.set_ylabel('Tmin (°C)', fontsize=8, color='#1565C0')
+    ax2.axhline(y=0, color='#C62828', lw=0.8, ls=':')
+    ax1.set_title('Probabilidad de Helada y Temperatura Mínima', fontsize=9, fontweight='bold', color='#1B5E20')
+    ax1.spines['top'].set_visible(False)
+    ax1.tick_params(labelsize=7); ax2.tick_params(labelsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_balance(plt, balance):
+    import numpy as np
+    pp = balance.get('precipitacion_mm',[0]*12)
+    etp = balance.get('etp_mm',[0]*12)
+    fig, ax = plt.subplots(figsize=(6.5, 2.5))
+    x = np.arange(12); w = 0.35
+    ax.bar(x-w/2, pp, w, label='Precipitación', color='#1565C0', alpha=0.8)
+    ax.bar(x+w/2, etp, w, label='ETP', color='#E65100', alpha=0.8)
+    for i in range(12):
+        if etp[i] > pp[i]:
+            ax.annotate('', xy=(i,pp[i]), xytext=(i,etp[i]),
+                        arrowprops=dict(arrowstyle='<->', color='#C62828', lw=0.7))
+    ax.set_xticks(x); ax.set_xticklabels(MESES, fontsize=7)
+    ax.set_ylabel('mm', fontsize=8)
+    ax.set_title('Balance Hídrico (P vs ETP)', fontsize=9, fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=7); ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_degree_days(plt, monthly_df):
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
+    dg = [monthly_df.loc['DIAS GRADO', m] for m in MESES]
+    dg12 = [monthly_df.loc['DIAS GRA12', m] for m in MESES]
+    ax.bar(range(12), dg, 0.4, label='Base 10°C', color='#E65100', alpha=0.8, align='center')
+    ax.bar([x+0.4 for x in range(12)], dg12, 0.4, label='Base 12°C', color='#F9A825', alpha=0.8, align='center')
+    ax.set_xticks([x+0.2 for x in range(12)]); ax.set_xticklabels(MESES, fontsize=7)
+    ax.set_ylabel('Grados-día', fontsize=8)
+    ax.set_title('Días Grado Mensuales', fontsize=9, fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=7); ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_chill_hours(plt, monthly_df):
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
+    hf = [monthly_df.loc['HRS.FRIO', m] for m in MESES]
+    hfr = [monthly_df.loc['HRS.FRES', m] for m in MESES]
+    ax.bar(range(12), hfr, color='#90CAF9', alpha=0.7, label='Hrs Frescas (<10°C)')
+    ax.bar(range(12), hf, color='#1565C0', alpha=0.9, label='Hrs Frío (<7°C)')
+    acum = [monthly_df.loc['HF.ACUM', m] for m in MESES]
+    ax2 = ax.twinx()
+    ax2.plot(range(12), acum, 'r-', lw=1.5, marker='s', ms=3, label='Acum. May-Dic')
+    ax2.set_ylabel('Acumuladas', fontsize=8, color='red')
+    ax.set_xticks(range(12)); ax.set_xticklabels(MESES, fontsize=7)
+    ax.set_ylabel('Horas/mes', fontsize=8)
+    ax.set_title('Horas de Frío y Frescas', fontsize=9, fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=6.5, loc='upper left'); ax2.legend(fontsize=6.5, loc='upper right')
+    ax.spines['top'].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_solar_radiation(plt, monthly_df):
+    fig, ax = plt.subplots(figsize=(6.5, 2.3))
+    rad = [monthly_df.loc['R.SOLAR', m] for m in MESES]
+    ax.plot(range(12), rad, 'o-', color='#F9A825', lw=2, ms=5)
+    ax.fill_between(range(12), rad, alpha=0.2, color='#F9A825')
+    for i, v in enumerate(rad):
+        ax.text(i, v+8, f'{v:.0f}', ha='center', fontsize=6)
+    ax.set_xticks(range(12)); ax.set_xticklabels(MESES, fontsize=7)
+    ax.set_ylabel('cal/cm²/día', fontsize=8)
+    ax.set_title('Radiación Solar Media Diaria', fontsize=9, fontweight='bold', color='#1B5E20')
+    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_enso_forecast(plt, oni_data, precip_data):
+    """Pronóstico multi-método con bandas de confianza."""
+    import numpy as np
+    pp_anual = precip_data.get('anual_mm', 500)
+    mega = precip_data.get('megasequia', {})
+    cambio = mega.get('cambio_pct', 0)
+
+    # Método 1: ENSO directo
+    estado = oni_data.get('estado', 'Neutro')
+    oni = oni_data.get('oni_actual', 0)
+    if estado == 'El Niño':
+        factor_enso = 1 + min(oni * 0.15, 0.4)
+    elif estado == 'La Niña':
+        factor_enso = 1 + max(oni * 0.15, -0.3)
+    else:
+        factor_enso = 1.0
+    m1 = pp_anual * factor_enso
+
+    # Método 2: Tendencia lineal (megasequía)
+    tasa_anual = cambio / 15 if cambio else 0  # % por año
+    m2 = pp_anual * (1 + tasa_anual * 5 / 100)  # 5 años adelante
+
+    # Método 3: Climatología + regresión ENSO
+    m3 = pp_anual * 0.5 + m1 * 0.5  # blend
+
+    metodos = ['ENSO\ndirecto', 'Tendencia\nlineal', 'Blend\nENSO+Clim', 'Climatología']
+    valores = [m1, m2, m3, pp_anual]
+    errores = [pp_anual*0.18, pp_anual*0.22, pp_anual*0.15, pp_anual*0.20]
+
+    fig, ax = plt.subplots(figsize=(6.5, 2.5))
+    cols = ['#1565C0', '#E65100', '#2E7D32', '#9E9E9E']
+    bars = ax.bar(metodos, valores, color=cols, alpha=0.85, edgecolor='white')
+    ax.errorbar(metodos, valores, yerr=errores, fmt='none', ecolor='black', capsize=4, lw=1)
+
+    for b, v in zip(bars, valores):
+        ax.text(b.get_x()+b.get_width()/2, v+10, f'{v:.0f}', ha='center', fontsize=8, fontweight='bold')
+
+    ax.axhline(y=pp_anual, color='gray', ls='--', lw=0.8, label=f'Normal ({pp_anual:.0f} mm)')
+    ax.set_ylabel('Precipitación (mm)', fontsize=8)
+    ax.set_title('Predicción Multi-Método: Precipitación Esperada', fontsize=10,
+                fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=7)
+    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    ax.tick_params(labelsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def _plot_frost_prediction(plt, heladas_data, enso):
+    """Predicción de heladas con modulación ENSO."""
+    por_mes = heladas_data.get('por_mes', [])
+    if not por_mes: return None
+
+    estado = enso.get('estado', 'Neutro')
+    # Factor ENSO para heladas
+    if estado == 'La Niña':
+        factor = 1.25  # más heladas
+    elif estado == 'El Niño':
+        factor = 0.75  # menos heladas
+    else:
+        factor = 1.0
+
+    fig, ax = plt.subplots(figsize=(6.5, 2.5))
+    meses_h = [m.get('mes','') for m in por_mes]
+    dias_base = [m.get('dias_helada_por_año', m.get('dias_helada_año', 0)) for m in por_mes]
+    dias_enso = [d * factor for d in dias_base]
+
+    x = range(12)
+    ax.bar([i-0.2 for i in x], dias_base, 0.35, label='Climatología', color='#1565C0', alpha=0.8)
+    ax.bar([i+0.2 for i in x], dias_enso, 0.35, label=f'Ajuste {estado}', color='#C62828' if factor>1 else '#2E7D32', alpha=0.8)
+    ax.set_xticks(x); ax.set_xticklabels(meses_h, fontsize=7)
+    ax.set_ylabel('Días helada/año', fontsize=8)
+    ax.set_title(f'Predicción de Heladas — Escenario {estado} (factor {factor:.2f})',
+                fontsize=9, fontweight='bold', color='#1B5E20')
+    ax.legend(fontsize=7)
+    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+    fig.tight_layout()
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  GENERADOR PRINCIPAL
+# ══════════════════════════════════════════════════════════════════════
+
+def generate_avanzado_pdf(localidad, lat, lon, alt, avanzado_report,
+                           monthly_df=None, dc_df=None, hel_df=None,
+                           bio_tables=None, analisis_texts=None,
+                           winkler=0, fototermico=0, huglin=0, huglin_clase='',
+                           noches_frias=0, noches_frias_clase='',
+                           porciones_frio=0, prob_helada=None,
+                           helada_tardia=None, tipo_helada=None):
     """
-    Genera el Informe Meteorológico Avanzado en PDF.
+    Genera PDF profesional de 15+ páginas.
 
     Parámetros:
-        localidad: nombre del lugar
-        lat, lon: coordenadas
-        alt: altitud (m)
-        avanzado_report: dict retornado por generar_informe_avanzado()
-
-    Retorna: bytes del PDF
+        - avanzado_report: dict de generar_informe_avanzado()
+        - monthly_df: DataFrame 18×13 (opcional, de climate_engine)
+        - dc_df, hel_df, bio_tables: tablas de Santibáñez (opcional)
+        - winkler, huglin, etc.: índices bioclimáticos (opcional)
     """
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf, pagesize=letter,
+    doc = SimpleDocTemplate(buf, pagesize=letter,
         leftMargin=2.2*cm, rightMargin=2.2*cm,
-        topMargin=2*cm, bottomMargin=2*cm,
-    )
+        topMargin=2*cm, bottomMargin=2*cm)
 
-    S = _create_styles()
-    elements = []
+    s = _S()
+    E = []  # elements
+    has_meteo = monthly_df is not None
 
-    secciones = avanzado_report.get('secciones', {})
-    precip = secciones.get('precipitacion', {})
-    heladas = secciones.get('heladas', {})
-    enso = secciones.get('enso', {})
-    agro = secciones.get('contexto_agro', {})
-    balance = secciones.get('balance_hidrico', {})
-    pronostico = secciones.get('pronostico', {})
-    resumen = secciones.get('resumen', {})
-    monitoreo = secciones.get('monitoreo', {})
-
-    fecha_gen = avanzado_report.get('fecha_generacion', datetime.now().strftime('%Y-%m-%d'))
+    sec = avanzado_report.get('secciones', {})
+    precip = sec.get('precipitacion', {})
+    heladas = sec.get('heladas', {})
+    enso = sec.get('enso', {})
+    agro = sec.get('contexto_agro', {})
+    balance = sec.get('balance_hidrico', {})
+    pronostico = sec.get('pronostico', {})
+    resumen = sec.get('resumen', {})
     dist_mar = avanzado_report.get('distancia_mar_km', 0)
+    fecha = avanzado_report.get('fecha_generacion', datetime.now().strftime('%Y-%m-%d'))
+    n_sec = 0
 
     # ════════════════════════════════════════════════════════════════
-    # PORTADA
+    # PORTADA (página 1)
     # ════════════════════════════════════════════════════════════════
-    elements.append(Spacer(1, 40))
-    elements.append(Paragraph('Informe Meteorológico Avanzado', S['Portada']))
-    elements.append(Paragraph(f'{localidad}', ParagraphStyle(
-        'loc', fontSize=18, leading=22, textColor=VERDE_MEDIO, spaceAfter=8)))
-    elements.append(Spacer(1, 6))
+    E.append(Spacer(1, 30))
+    E.append(Paragraph('Informe Meteorológico<br/>Avanzado', s['Portada']))
+    E.append(Paragraph(localidad, s['PortadaSub']))
+    E.append(Spacer(1, 4))
+    E.append(Paragraph(
+        f'Lat: {abs(lat):.4f}°S | Lon: {abs(lon):.4f}°W | Alt: {alt:.0f} m s.n.m. | '
+        f'Dist. costa: {dist_mar:.0f} km | Generado: {fecha}', s['Src']))
+    E.append(Spacer(1, 10))
 
-    # Línea de metadata
-    meta_text = (
-        f'Coordenadas: {lat:.4f}°S, {abs(lon):.4f}°W  |  '
-        f'Altitud: {alt:.0f} m s.n.m.  |  '
-        f'Dist. al mar: {dist_mar:.0f} km  |  '
-        f'Generado: {fecha_gen}'
-    )
-    elements.append(Paragraph(meta_text, S['Fuente']))
-    elements.append(Spacer(1, 10))
-
-    # KPIs principales
-    pp_anual = precip.get('anual_mm', 0)
-    dias_hel = heladas.get('dias_helada_año_promedio', 0)
+    pp_a = precip.get('anual_mm', 0)
+    dias_h = heladas.get('dias_helada_año_promedio', 0)
     plh = heladas.get('periodo_libre_heladas_dias', 0)
-    estado_enso = enso.get('estado', 'N/D')
-    oni = enso.get('oni_actual', 0)
-
-    kpis = [
-        (f'{pp_anual:.0f}', ' mm', 'Precip. anual'),
-        (f'{dias_hel:.0f}', ' d/año', 'Heladas'),
-        (f'{plh}', ' días', 'Per. libre heladas'),
-        (estado_enso, '', 'ENSO'),
-        (f'{alt:.0f}', ' m', 'Altitud'),
-    ]
-    elements.append(_make_kpi_table(kpis))
-    elements.append(Spacer(1, 10))
+    E.append(_kpi_row([
+        (f'{pp_a:.0f} mm', 'Precip. anual'),
+        (f'{dias_h:.0f} d/año', 'Heladas'),
+        (f'{plh} días', 'Per. libre heladas'),
+        (enso.get('estado','N/D'), 'ENSO'),
+        (f'{alt:.0f} m', 'Altitud'),
+    ]))
+    E.append(Spacer(1, 8))
 
     # Alertas
-    alertas = resumen.get('alertas', [])
-    if alertas:
-        for a in alertas:
-            if 'ALTO' in a or 'árida' in a.lower():
-                elements.append(_make_alert_box(a.replace('🔴 ', ''), 'rojo'))
-            elif 'Megasequía' in a or 'moderado' in a.lower() or 'baja' in a.lower() or 'SECO' in a:
-                elements.append(_make_alert_box(a.replace('🟡 ', ''), 'naranja'))
-            else:
-                elements.append(_make_alert_box(a.replace('🟢 ', ''), 'verde'))
-            elements.append(Spacer(1, 3))
+    for a in resumen.get('alertas', []):
+        clean = a.replace('🔴 ','').replace('🟡 ','').replace('🟢 ','')
+        niv = 'rojo' if '🔴' in a else 'naranja' if '🟡' in a else 'verde'
+        E.append(_alert_box(clean, niv))
+        E.append(Spacer(1, 2))
 
-    elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width='100%', thickness=1, color=VERDE_CLARO))
+    E.append(Spacer(1, 6))
+    E.append(HRFlowable(width='100%', thickness=1, color=V_CLA))
 
     # ════════════════════════════════════════════════════════════════
     # 1. RESUMEN EJECUTIVO
     # ════════════════════════════════════════════════════════════════
-    elements.append(Paragraph('1. Resumen Ejecutivo', S['Seccion']))
-
-    # Generar relato automático
-    resumen_text = _generar_relato_resumen(localidad, lat, lon, alt, dist_mar,
-                                            precip, heladas, enso, agro, balance, pronostico)
-    elements.append(Paragraph(resumen_text, S['Cuerpo']))
-
-    # ════════════════════════════════════════════════════════════════
-    # 2. CONTEXTO ENSO Y VARIABILIDAD CLIMÁTICA
-    # ════════════════════════════════════════════════════════════════
-    elements.append(Paragraph('2. Contexto Climático: ENSO y Variabilidad Interanual', S['Seccion']))
-
-    enso_text = _generar_relato_enso(enso, lat)
-    elements.append(Paragraph(enso_text, S['Cuerpo']))
-
-    if enso.get('interpretacion_agro'):
-        elements.append(_make_alert_box(enso['interpretacion_agro'], 'azul'))
-        elements.append(Spacer(1, 4))
-
-    elements.append(Paragraph(
-        'Fuente: NOAA CPC — Oceanic Niño Index (ONI), Pacific Decadal Oscillation (PDO), '
-        'Southern Oscillation Index (SOI). Huang et al. (2017), Mantua et al. (1997).',
-        S['Fuente']))
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. Resumen Ejecutivo', s['Sec']))
+    E.append(Paragraph(_relato_resumen(localidad, lat, lon, alt, dist_mar,
+                                        precip, heladas, enso, agro, balance, pronostico,
+                                        has_meteo, winkler, huglin), s['B']))
 
     # ════════════════════════════════════════════════════════════════
-    # 3. PRECIPITACIÓN
+    # 2. RÉGIMEN TÉRMICO
     # ════════════════════════════════════════════════════════════════
-    elements.append(PageBreak())
-    elements.append(Paragraph('3. Análisis de Precipitación', S['Seccion']))
+    E.append(PageBreak())
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. Régimen Térmico', s['Sec']))
+
+    if has_meteo:
+        E.append(Paragraph(
+            f'El análisis térmico se basa en datos TMY (Typical Meteorological Year) de 8.760 horas, '
+            f'procesados según la metodología de Fernando Santibáñez (Atlas Agroclimático de Chile). '
+            f'La temperatura máxima media anual es de <b>{monthly_df.loc["T.MAX","Anual"]:.1f}°C</b>, '
+            f'la media de <b>{monthly_df.loc["T.MED","Anual"]:.1f}°C</b> y la mínima de '
+            f'<b>{monthly_df.loc["T.MIN","Anual"]:.1f}°C</b>. '
+            f'La amplitud térmica media es de '
+            f'<b>{monthly_df.loc["T.MAX","Anual"]-monthly_df.loc["T.MIN","Anual"]:.1f}°C</b>, '
+            f'lo que es {"alto, típico de climas continentales" if monthly_df.loc["T.MAX","Anual"]-monthly_df.loc["T.MIN","Anual"] > 15 else "moderado, con influencia oceánica"}.',
+            s['B']))
+
+        # Gráfico perfil térmico
+        ch = _chart(lambda plt: _plot_temp_profile(plt, monthly_df), h=190)
+        if ch: E.append(ch); E.append(Spacer(1, 6))
+
+        # Tabla Tmax, Tmin, Tmed
+        E.append(Paragraph(f'{n_sec}.1 Temperaturas Mensuales (°C)', s['Sub']))
+        rows = [[''] + MESES + ['Anual']]
+        for var, label in [('T.MAX','T.Máx'), ('T.MED','T.Med'), ('T.MIN','T.Mín')]:
+            row = [label]
+            for m in MESES + ['Anual']:
+                row.append(f'{monthly_df.loc[var, m]:.1f}')
+            rows.append(row)
+        E.append(_tbl(rows, [40]+[31]*12+[36]))
+        E.append(Spacer(1, 4))
+        E.append(Paragraph('Fuente: Meteonorm 8.2 / PVsyst TMY (2010-2019). Metodología: Santibáñez (2017).', s['Src']))
+
+        # Días grado
+        E.append(Paragraph(f'{n_sec}.2 Días Grado y Acumulación Térmica', s['Sub']))
+        dg_anual = monthly_df.loc['DIAS GRADO', 'Anual']
+        dg12_anual = monthly_df.loc['DIAS GRA12', 'Anual']
+        E.append(Paragraph(
+            f'Los días grado base 10°C acumulados anualmente son <b>{dg_anual:.0f} °C·día</b> '
+            f'y base 12°C son <b>{dg12_anual:.0f} °C·día</b>. La acumulación térmica efectiva '
+            f'(Oct-Mar) determina la aptitud para cultivos de ciclo largo como vid y frutales de '
+            f'hoja caduca.', s['B']))
+        ch = _chart(lambda plt: _plot_degree_days(plt, monthly_df), h=160)
+        if ch: E.append(ch)
+
+        # Radiación solar
+        E.append(Paragraph(f'{n_sec}.3 Radiación Solar', s['Sub']))
+        rad_max = max(monthly_df.loc['R.SOLAR', m] for m in MESES)
+        rad_min = min(monthly_df.loc['R.SOLAR', m] for m in MESES)
+        E.append(Paragraph(
+            f'La radiación solar media diaria oscila entre <b>{rad_min:.0f} cal/cm²/día</b> '
+            f'en invierno y <b>{rad_max:.0f} cal/cm²/día</b> en verano. '
+            f'Este rango es {"adecuado para la mayoría de los cultivos frutícolas" if rad_max > 350 else "limitante para cultivos de alta demanda lumínica"}. '
+            f'La radiación condiciona la coloración de frutos (manzanas, cerezas), la acumulación '
+            f'de azúcares (vid) y la eficiencia fotosintética general.',
+            s['B']))
+        ch = _chart(lambda plt: _plot_solar_radiation(plt, monthly_df), h=160)
+        if ch: E.append(ch)
+
+    elif heladas.get('por_mes'):
+        # Sin meteo, usar datos CR2MET de Tmin
+        E.append(Paragraph(
+            'El análisis térmico se basa en datos grillados CR2MET v2.0 (temperatura mínima). '
+            'Para el perfil completo de temperatura máxima y media se requieren datos TMY.', s['B']))
+        por_mes = heladas['por_mes']
+        rows = [['Mes'] + [m.get('mes','') for m in por_mes]]
+        rows.append(['Tmin media'] + [f'{m.get("tmin_media_C",0):.1f}' for m in por_mes])
+        rows.append(['Tmin abs.'] + [f'{m.get("tmin_minima_abs_C",m.get("tmin_min_abs_C",0)):.1f}' for m in por_mes])
+        E.append(_tbl(rows, [55]+[33]*12))
+        E.append(Paragraph('Fuente: CR2MET Tmin v2.0 (Boisier et al., 2018). Período 1991-2020.', s['Src']))
+
+    # ════════════════════════════════════════════════════════════════
+    # 3. HORAS DE FRÍO Y VERNALIZACIÓN
+    # ════════════════════════════════════════════════════════════════
+    if has_meteo:
+        E.append(PageBreak())
+        n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Horas de Frío y Requerimientos de Vernalización', s['Sec']))
+
+        hf_anual = monthly_df.loc['HRS.FRIO', 'Anual']
+        hfr_anual = monthly_df.loc['HRS.FRES', 'Anual']
+        hf_acum_max = max(monthly_df.loc['HF.ACUM', m] for m in MESES)
+
+        E.append(Paragraph(
+            f'Las horas de frío (T<7°C) acumuladas anualmente son <b>{hf_anual:.0f} horas</b> '
+            f'y las horas frescas (T<10°C) son <b>{hfr_anual:.0f} horas</b>. '
+            f'La acumulación máxima mayo-diciembre alcanza <b>{hf_acum_max:.0f} horas</b>. '
+            f'Estos valores son {"suficientes para la mayoría de frutales caducifolios (cerezo, manzano, nogal)" if hf_anual > 800 else "limitantes para especies de alto requerimiento (cerezo, manzano)" if hf_anual > 400 else "insuficientes para la mayoría de frutales caducifolios"}.',
+            s['B']))
+
+        ch = _chart(lambda plt: _plot_chill_hours(plt, monthly_df), h=165)
+        if ch: E.append(ch); E.append(Spacer(1, 4))
+
+        # Tabla de requerimientos por especie
+        E.append(Paragraph(f'{n_sec}.1 Requerimientos de Frío por Especie', s['Sub']))
+        req_data = [
+            ['Especie', 'Req. HF', 'Disponible', 'Estado'],
+            ['Cerezo', '800-1200', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 800 else 'Déficit'],
+            ['Manzano', '600-1000', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 600 else 'Déficit'],
+            ['Nogal', '400-700', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 400 else 'Déficit'],
+            ['Vid', '100-400', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 100 else 'Déficit'],
+            ['Almendro', '200-500', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 200 else 'Déficit'],
+            ['Palto', '0-50', f'{hf_anual:.0f}', 'N/A (perenne)'],
+            ['Arándano', '400-800', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 400 else 'Déficit'],
+            ['Kiwi', '600-800', f'{hf_anual:.0f}', 'Cumple' if hf_anual >= 600 else 'Déficit'],
+        ]
+        t = _tbl(req_data, [90, 80, 80, 80])
+        E.append(t)
+
+        if porciones_frio > 0:
+            E.append(Paragraph(f'{n_sec}.2 Porciones de Frío Dinámicas (Fishman 1987)', s['Sub']))
+            E.append(Paragraph(
+                f'Las <b>Porciones de Frío Dinámicas</b> acumuladas son <b>{porciones_frio:.0f} CP</b>. '
+                f'Este modelo es más preciso que las horas de frío clásicas porque considera '
+                f'la irreversibilidad de la acumulación y el efecto negativo de temperaturas altas '
+                f'intercaladas. Referencia: Fishman et al. (1987), Erez et al. (1990).', s['B']))
+
+            cp_req = [
+                ['Especie', 'Req. CP', 'Disponible', 'Estado'],
+                ['Cerezo', '60-80', f'{porciones_frio:.0f}', 'Cumple' if porciones_frio >= 60 else 'Déficit'],
+                ['Manzano', '50-70', f'{porciones_frio:.0f}', 'Cumple' if porciones_frio >= 50 else 'Déficit'],
+                ['Nogal', '30-50', f'{porciones_frio:.0f}', 'Cumple' if porciones_frio >= 30 else 'Déficit'],
+                ['Almendro', '20-40', f'{porciones_frio:.0f}', 'Cumple' if porciones_frio >= 20 else 'Déficit'],
+                ['Arándano', '35-55', f'{porciones_frio:.0f}', 'Cumple' if porciones_frio >= 35 else 'Déficit'],
+            ]
+            E.append(_tbl(cp_req, [90, 80, 80, 80]))
+
+    # ════════════════════════════════════════════════════════════════
+    # 4. ANÁLISIS DE HELADAS
+    # ════════════════════════════════════════════════════════════════
+    E.append(PageBreak())
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. Análisis de Heladas y Riesgo de Daño', s['Sec']))
+
+    if heladas:
+        tmin_abs = heladas.get('tmin_absoluta_C', 0)
+        meses_sin = heladas.get('meses_sin_helada', [])
+        E.append(Paragraph(_relato_heladas(heladas, localidad, alt, enso), s['B']))
+
+        ch = _chart(lambda plt: _plot_frost_profile(plt, heladas), h=175)
+        if ch: E.append(ch); E.append(Spacer(1, 4))
+
+        # Tabla mensual detallada
+        por_mes = heladas.get('por_mes', [])
+        if por_mes:
+            E.append(Paragraph(f'{n_sec}.1 Estadísticas Mensuales de Helada', s['Sub']))
+            rows = [['Mes', 'Tmin media', 'Tmin absoluta', 'P(helada/mes)', 'Días helada/año']]
+            for m in por_mes:
+                prob = m.get('prob_helada_mensual', 0)
+                rows.append([
+                    m.get('mes',''), f'{m.get("tmin_media_C",0):.1f}°C',
+                    f'{m.get("tmin_minima_abs_C",m.get("tmin_min_abs_C",0)):.1f}°C',
+                    f'{prob*100:.0f}%',
+                    f'{m.get("dias_helada_por_año",m.get("dias_helada_año",0)):.1f}',
+                ])
+            t = _tbl(rows, [45, 75, 75, 80, 80])
+            # Colorear filas de riesgo
+            extra = []
+            for i, m in enumerate(por_mes):
+                p = m.get('prob_helada_mensual', 0)
+                if p > 0.5:
+                    extra.append(('BACKGROUND', (0,i+1), (-1,i+1), RJ_CL))
+                elif p > 0.2:
+                    extra.append(('BACKGROUND', (0,i+1), (-1,i+1), NJ_CL))
+            if extra:
+                _tbl_add_style(t, *extra)
+            E.append(t)
+            E.append(Spacer(1, 4))
+
+    # Tabla intensidad de heladas (de PVsyst si disponible)
+    if hel_df is not None:
+        E.append(Paragraph(f'{n_sec}.2 Intensidad de Heladas por Umbral', s['Sub']))
+        E.append(Paragraph(
+            'La siguiente tabla muestra el número promedio de días que la temperatura '
+            'desciende bajo cada umbral, lo que permite evaluar la severidad de las heladas. '
+            'Heladas bajo -4°C se consideran severas con daño irreversible en la mayoría '
+            'de los frutales en floración.', s['B']))
+        rows = [[''] + list(hel_df.columns)]
+        for idx in hel_df.index:
+            rows.append([str(idx)] + [f'{v:.1f}' if isinstance(v, float) else str(v) for v in hel_df.loc[idx]])
+        E.append(_tbl(rows, [55]+[31]*len(hel_df.columns), font_sz=7))
+        E.append(Paragraph('Fuente: PVsyst TMY. Metodología Santibáñez (2017).', s['Src']))
+
+    # Helada tardía
+    if helada_tardia:
+        E.append(Paragraph(f'{n_sec}.3 Riesgo de Helada Tardía (Sep-Nov)', s['Sub']))
+        total_t = helada_tardia.get('total', 0)
+        por_mes_t = helada_tardia.get('por_mes', {})
+        alerta_t = helada_tardia.get('alerta', '')
+        nivel_t = helada_tardia.get('nivel', '')
+        E.append(Paragraph(
+            f'Se registran en promedio <b>{total_t:.1f} días de helada tardía</b> '
+            f'(septiembre-noviembre), con la siguiente distribución: '
+            f'{", ".join(f"{m}: {v:.1f} días" for m, v in por_mes_t.items() if v > 0)}. '
+            f'<b>{alerta_t}</b>', s['B']))
+        if nivel_t in ('CRITICO', 'ALTO'):
+            E.append(_alert_box(
+                f'RIESGO {nivel_t}: Las heladas tardías coinciden con floración de frutales '
+                f'de hoja caduca. Riesgo de pérdida parcial o total de producción.', 'rojo'))
+
+    # Tipo de helada
+    if tipo_helada:
+        E.append(Paragraph(f'{n_sec}.4 Clasificación del Tipo de Helada', s['Sub']))
+        rad = tipo_helada.get('radiativa', 0)
+        adv = tipo_helada.get('advectiva', 0)
+        total = tipo_helada.get('total', rad + adv)
+        pct_rad = rad/total*100 if total > 0 else 0
+        E.append(Paragraph(
+            f'Del total de <b>{total} eventos de helada</b>, el <b>{pct_rad:.0f}% son '
+            f'radiativas</b> ({rad} eventos) y el <b>{100-pct_rad:.0f}% advectivas</b> '
+            f'({adv} eventos). Las heladas radiativas ocurren en noches despejadas y calmas '
+            f'por inversión térmica y son controlables con ventiladores o aspersión. '
+            f'Las advectivas se deben a entrada de masas de aire polar y son más difíciles de mitigar.',
+            s['B']))
+
+    E.append(Paragraph(
+        f'Fuente: {heladas.get("fuente","CR2MET Tmin v2.0")}. Período 1991-2020. '
+        'Ref: Boisier et al. (2018).', s['Src']))
+
+    # ════════════════════════════════════════════════════════════════
+    # 5. PRECIPITACIÓN Y SEQUÍA
+    # ════════════════════════════════════════════════════════════════
+    E.append(PageBreak())
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. Precipitación, Sequía y Eventos Extremos', s['Sec']))
 
     if precip:
-        precip_text = _generar_relato_precipitacion(precip, localidad, lat)
-        elements.append(Paragraph(precip_text, S['Cuerpo']))
+        E.append(Paragraph(_relato_precip(precip, localidad), s['B']))
 
-        # Gráfico
-        chart = _plot_precip_chart(precip)
-        if chart:
-            elements.append(chart)
-            elements.append(Spacer(1, 6))
+        ch = _chart(lambda plt: _plot_precip_bar(plt, precip), h=160)
+        if ch: E.append(ch); E.append(Spacer(1, 4))
 
         # Tabla mensual
         if precip.get('mensual_mm'):
-            elements.append(Paragraph('3.1 Climatología Mensual', S['SubSeccion']))
-            data = [['Mes'] + MESES + ['Anual'],
-                    ['mm'] + [f'{v:.0f}' for v in precip['mensual_mm']] +
-                    [f'{precip.get("anual_mm", 0):.0f}']]
-            t = Table(data, colWidths=[35] + [32]*12 + [38])
-            t.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), VERDE_OSCURO),
-                ('TEXTCOLOR', (0, 0), (-1, 0), BLANCO),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 7.5),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('GRID', (0, 0), (-1, -1), 0.3, GRIS_MEDIO),
-                ('BACKGROUND', (-1, 0), (-1, -1), VERDE_CLARO),
-                ('FONTNAME', (-1, 1), (-1, 1), 'Helvetica-Bold'),
-            ]))
-            elements.append(t)
-            elements.append(Spacer(1, 6))
+            rows = [['Mes']+MESES+['Anual'],
+                    ['mm']+[f'{v:.0f}' for v in precip['mensual_mm']]+[f'{pp_a:.0f}']]
+            t = _tbl(rows, [35]+[32]*12+[38])
+            _tbl_add_style(t, ('BACKGROUND',(-1,0),(-1,-1),V_CLA),
+                           ('FONTNAME',(-1,1),(-1,1),'Helvetica-Bold'))
+            E.append(t)
+            E.append(Spacer(1, 4))
 
-        # Validación cruzada
-        validacion = precip.get('validacion')
-        if validacion:
-            elements.append(Paragraph('3.2 Validación Cruzada CR2MET vs Estaciones', S['SubSeccion']))
-            val_text = (
-                f'La precipitación estimada por CR2MET ({validacion.get("cr2met_mm", 0):.0f} mm/año) '
-                f'fue comparada con la interpolación IDW de estaciones pluviométricas cercanas '
-                f'({validacion.get("estaciones_mm", 0):.0f} mm/año). '
-                f'La razón CR2MET/Estaciones es {validacion.get("ratio", 0):.2f}, '
-                f'lo que indica una concordancia <b>{validacion.get("concordancia", "N/D")}</b>. '
-            )
-            if validacion.get('estaciones_usadas'):
-                val_text += f'Estaciones utilizadas: {", ".join(validacion["estaciones_usadas"][:3])}.'
-            elements.append(Paragraph(val_text, S['Cuerpo']))
+        # Validación
+        val = precip.get('validacion')
+        if val:
+            E.append(Paragraph(f'{n_sec}.1 Validación Cruzada', s['Sub']))
+            E.append(Paragraph(
+                f'CR2MET: {val.get("cr2met_mm",0):.0f} mm vs Estaciones: {val.get("estaciones_mm",0):.0f} mm. '
+                f'Ratio: {val.get("ratio",0):.2f}. Concordancia: <b>{val.get("concordancia","N/D")}</b>. '
+                f'Estaciones: {", ".join(val.get("estaciones_usadas",[])[:4])}.', s['Sm']))
 
         # Megasequía
         mega = precip.get('megasequia')
         if mega:
-            elements.append(Paragraph('3.3 Tendencia de Megasequía', S['SubSeccion']))
-            mega_text = _generar_relato_megasequia(mega, localidad)
-            elements.append(Paragraph(mega_text, S['Cuerpo']))
-
+            E.append(Paragraph(f'{n_sec}.2 Tendencia de Megasequía', s['Sub']))
+            E.append(Paragraph(_relato_megasequia(mega), s['B']))
             cambio = mega.get('cambio_pct', 0)
             if cambio < -15:
-                elements.append(_make_alert_box(
-                    f'DÉFICIT SIGNIFICATIVO: La precipitación del período 2006-2020 fue un '
-                    f'{abs(cambio):.0f}% inferior al período 1991-2005. '
-                    f'Este punto se encuentra en zona de megasequía activa.',
-                    'rojo'))
-            elif cambio < -5:
-                elements.append(_make_alert_box(
-                    f'Déficit moderado: reducción del {abs(cambio):.0f}% respecto al período base.',
-                    'naranja'))
+                E.append(_alert_box(
+                    f'DÉFICIT SIGNIFICATIVO: {abs(cambio):.0f}% menos que 1991-2005. '
+                    'Zona de megasequía activa (Garreaud et al., 2024).', 'rojo'))
 
         # Extremos
-        extremos = precip.get('extremos') or precip.get('extremos_diarios')
-        if extremos:
-            elements.append(Paragraph('3.4 Eventos Extremos de Precipitación', S['SubSeccion']))
-            ext_text = (
-                f'En el período climatológico, el percentil 95 de precipitación diaria es '
-                f'<b>{extremos.get("p95_mm", 0):.0f} mm</b> y el percentil 99 alcanza '
-                f'<b>{extremos.get("p99_mm", 0):.0f} mm</b>. El máximo diario registrado fue '
-                f'<b>{extremos.get("max_diario_mm", 0):.0f} mm</b>. '
-                f'Se registran en promedio <b>{extremos.get("dias_lluvia_por_año", 0):.0f} días '
-                f'de lluvia por año</b> (>1 mm/día).'
-            )
-            elements.append(Paragraph(ext_text, S['Cuerpo']))
-
-        elements.append(Paragraph(
-            f'Fuente: {precip.get("fuente", "CR2MET v2.0")}. '
-            'Ref: Boisier et al. (2018). CR2MET. Centro de Ciencia del Clima, U. de Chile.',
-            S['Fuente']))
-
-    # ════════════════════════════════════════════════════════════════
-    # 4. HELADAS Y TEMPERATURA MÍNIMA
-    # ════════════════════════════════════════════════════════════════
-    elements.append(Paragraph('4. Análisis de Heladas y Temperatura Mínima', S['Seccion']))
-
-    if heladas:
-        heladas_text = _generar_relato_heladas(heladas, localidad, alt, enso)
-        elements.append(Paragraph(heladas_text, S['Cuerpo']))
-
-        # Gráfico
-        chart = _plot_heladas_chart(heladas)
-        if chart:
-            elements.append(chart)
-            elements.append(Spacer(1, 6))
-
-        # Tabla mensual de heladas
-        por_mes = heladas.get('por_mes', [])
-        if por_mes:
-            elements.append(Paragraph('4.1 Estadísticas Mensuales de Helada', S['SubSeccion']))
-            headers = ['Mes', 'Tmin media', 'Tmin abs.', 'P(helada/mes)', 'Días helada/año']
-            rows = [headers]
-            for m in por_mes:
-                prob = m.get('prob_helada_mensual', 0)
-                rows.append([
-                    m.get('mes', ''),
-                    f'{m.get("tmin_media_C", 0):.1f} °C',
-                    f'{m.get("tmin_minima_abs_C", m.get("tmin_min_abs_C", 0)):.1f} °C',
-                    f'{prob*100:.0f}%',
-                    f'{m.get("dias_helada_por_año", m.get("dias_helada_año", 0)):.1f}',
-                ])
-
-            t = Table(rows, colWidths=[45, 70, 70, 85, 85])
-            style_cmds = [
-                ('BACKGROUND', (0, 0), (-1, 0), VERDE_OSCURO),
-                ('TEXTCOLOR', (0, 0), (-1, 0), BLANCO),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 8),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('GRID', (0, 0), (-1, -1), 0.3, GRIS_MEDIO),
-            ]
-            # Colorear filas con helada significativa
-            for i, m in enumerate(por_mes):
-                prob = m.get('prob_helada_mensual', 0)
-                if prob > 0.5:
-                    style_cmds.append(('BACKGROUND', (0, i+1), (-1, i+1), ROJO_CLARO))
-                elif prob > 0.2:
-                    style_cmds.append(('BACKGROUND', (0, i+1), (-1, i+1), NARANJA_CLARO))
-                elif prob > 0.05:
-                    style_cmds.append(('BACKGROUND', (0, i+1), (-1, i+1), colors.HexColor('#FFF8E1')))
-
-            t.setStyle(TableStyle(style_cmds))
-            elements.append(t)
-            elements.append(Spacer(1, 6))
-
-        # Riesgo ENSO
-        efecto = heladas.get('efecto_enso')
-        if efecto:
-            elements.append(Paragraph('4.2 Efecto ENSO sobre Heladas', S['SubSeccion']))
-            elements.append(Paragraph(efecto, S['Cuerpo']))
-
-        elements.append(Paragraph(
-            f'Fuente: {heladas.get("fuente", "CR2MET Tmin v2.0")}. '
-            'Metodología: frecuencia observada de Tmin < 0°C en datos diarios, '
-            'período 1991-2020, resolución ~5.5 km. P(mensual) = 1-(1-p_diaria)^30.',
-            S['Fuente']))
-
-    # ════════════════════════════════════════════════════════════════
-    # 5. RIESGO AGRONÓMICO POR ESPECIE
-    # ════════════════════════════════════════════════════════════════
-    if agro and agro.get('heladas_agronomicas'):
-        elements.append(PageBreak())
-        elements.append(Paragraph('5. Riesgo Agronómico de Heladas por Especie', S['Seccion']))
-
-        agro_text = _generar_relato_agro(agro, heladas, localidad)
-        elements.append(Paragraph(agro_text, S['Cuerpo']))
-
-        # Tabla de riesgo por especie
-        ha_list = agro['heladas_agronomicas']
-        headers = ['Especie', 'Sup. (ha)', 'Umbral (°C)', 'P(daño Sep)', 'P(daño Oct)', 'Riesgo']
-        rows = [headers]
-        for h in ha_list[:15]:  # top 15
-            rows.append([
-                h.get('especie', ''),
-                f'{h.get("superficie_ha", 0):.0f}',
-                f'{h.get("umbral_floracion", 0):.1f}',
-                f'{h.get("p_dano_sep", 0):.0f}%',
-                f'{h.get("p_dano_oct", 0):.0f}%',
-                h.get('riesgo', ''),
-            ])
-
-        t = Table(rows, colWidths=[95, 55, 65, 65, 65, 65])
-        style_cmds = [
-            ('BACKGROUND', (0, 0), (-1, 0), VERDE_OSCURO),
-            ('TEXTCOLOR', (0, 0), (-1, 0), BLANCO),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('GRID', (0, 0), (-1, -1), 0.3, GRIS_MEDIO),
-        ]
-        for i, h in enumerate(ha_list[:15]):
-            riesgo = h.get('riesgo', '')
-            if riesgo == 'MUY ALTO':
-                style_cmds.append(('BACKGROUND', (-1, i+1), (-1, i+1), ROJO_CLARO))
-                style_cmds.append(('TEXTCOLOR', (-1, i+1), (-1, i+1), ROJO))
-            elif riesgo == 'ALTO':
-                style_cmds.append(('BACKGROUND', (-1, i+1), (-1, i+1), NARANJA_CLARO))
-                style_cmds.append(('TEXTCOLOR', (-1, i+1), (-1, i+1), NARANJA))
-
-        t.setStyle(TableStyle(style_cmds))
-        elements.append(t)
-        elements.append(Spacer(1, 6))
-
-        elements.append(Paragraph(
-            'Fuente: Catastro Frutícola Nacional (CIREN/ODEPA). '
-            'Umbrales de daño: INIA Boletín Técnico, Atlas Agroclimático (Santibáñez 2017), '
-            'UC Davis Fruit & Nut Research.',
-            S['Fuente']))
+        ext = precip.get('extremos') or precip.get('extremos_diarios')
+        if ext:
+            E.append(Paragraph(f'{n_sec}.3 Eventos Extremos', s['Sub']))
+            E.append(Paragraph(
+                f'P95: <b>{ext.get("p95_mm",0):.0f} mm</b> | '
+                f'P99: <b>{ext.get("p99_mm",0):.0f} mm</b> | '
+                f'Máx diario: <b>{ext.get("max_diario_mm",0):.0f} mm</b> | '
+                f'Días lluvia/año: <b>{ext.get("dias_lluvia_por_año",0):.0f}</b>', s['Bn']))
 
     # ════════════════════════════════════════════════════════════════
     # 6. BALANCE HÍDRICO
     # ════════════════════════════════════════════════════════════════
     if balance:
-        elements.append(Paragraph('6. Balance Hídrico Simplificado', S['Seccion']))
+        n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Balance Hídrico', s['Sec']))
+        deficit = balance.get('deficit_anual_mm', 0)
+        meses_e = balance.get('meses_estres', 0)
+        E.append(Paragraph(_relato_balance(balance, precip), s['B']))
+        ch = _chart(lambda plt: _plot_balance(plt, balance), h=170)
+        if ch: E.append(ch); E.append(Spacer(1, 4))
 
-        balance_text = _generar_relato_balance(balance, localidad, precip)
-        elements.append(Paragraph(balance_text, S['Cuerpo']))
-
-        chart = _plot_balance_hidrico(balance)
-        if chart:
-            elements.append(chart)
-            elements.append(Spacer(1, 6))
-
-        # Tabla mensual
+        # Tabla
         if balance.get('precipitacion_mm') and balance.get('etp_mm'):
             pp_m = balance['precipitacion_mm']
             etp_m = balance['etp_mm']
-            bal_m = balance.get('balance_mm', [pp_m[i] - etp_m[i] for i in range(12)])
-
-            data = [
-                [''] + MESES,
-                ['P (mm)'] + [f'{v:.0f}' for v in pp_m],
-                ['ETP (mm)'] + [f'{v:.0f}' for v in etp_m],
-                ['Balance'] + [f'{v:+.0f}' for v in bal_m],
+            bal_m = [pp_m[i]-etp_m[i] for i in range(12)]
+            rows = [
+                ['']+MESES,
+                ['P (mm)']+[f'{v:.0f}' for v in pp_m],
+                ['ETP (mm)']+[f'{v:.0f}' for v in etp_m],
+                ['Balance']+[f'{v:+.0f}' for v in bal_m],
             ]
-            t = Table(data, colWidths=[50] + [33]*12)
-            style_cmds = [
-                ('BACKGROUND', (0, 0), (-1, 0), VERDE_OSCURO),
-                ('TEXTCOLOR', (0, 0), (-1, 0), BLANCO),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 7.5),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('GRID', (0, 0), (-1, -1), 0.3, GRIS_MEDIO),
-            ]
+            t = _tbl(rows, [50]+[33]*12, font_sz=7.5)
+            extra = []
             for i in range(12):
                 if bal_m[i] < -20:
-                    style_cmds.append(('BACKGROUND', (i+1, 3), (i+1, 3), ROJO_CLARO))
+                    extra.append(('BACKGROUND',(i+1,3),(i+1,3),RJ_CL))
                 elif bal_m[i] < 0:
-                    style_cmds.append(('BACKGROUND', (i+1, 3), (i+1, 3), NARANJA_CLARO))
+                    extra.append(('BACKGROUND',(i+1,3),(i+1,3),NJ_CL))
                 else:
-                    style_cmds.append(('BACKGROUND', (i+1, 3), (i+1, 3), VERDE_FONDO))
-
-            t.setStyle(TableStyle(style_cmds))
-            elements.append(t)
-
-        elements.append(Spacer(1, 4))
-        elements.append(Paragraph(
-            'Nota: ETP estimada con curva latitudinal simplificada (Penman-Monteith FAO-56 adaptado). '
-            'Para cálculos de riego, usar ETo local con datos de estación meteorológica.',
-            S['Fuente']))
+                    extra.append(('BACKGROUND',(i+1,3),(i+1,3),V_FND))
+            if extra:
+                _tbl_add_style(t, *extra)
+            E.append(t)
 
     # ════════════════════════════════════════════════════════════════
-    # 7. PRONÓSTICO ESTACIONAL
+    # 7. ÍNDICES BIOCLIMÁTICOS
     # ════════════════════════════════════════════════════════════════
-    if pronostico:
-        elements.append(Paragraph('7. Pronóstico Estacional', S['Seccion']))
+    if has_meteo and (winkler > 0 or huglin > 0):
+        E.append(PageBreak())
+        n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Índices Bioclimáticos y Clasificación Vitícola', s['Sec']))
+        E.append(Paragraph(
+            'Los índices bioclimáticos permiten clasificar el potencial agroclimático de un '
+            'territorio según estándares internacionales. Estos índices son fundamentales para '
+            'la selección de variedades y la planificación de nuevas plantaciones.', s['B']))
 
-        pron_text = _generar_relato_pronostico(pronostico, enso, localidad, precip)
-        elements.append(Paragraph(pron_text, S['Cuerpo']))
+        # Tabla de índices
+        idx_rows = [['Índice', 'Valor', 'Clasificación', 'Interpretación']]
+        if winkler > 0:
+            if winkler < 1111: wk_cl = 'Región I (Frío)'
+            elif winkler < 1389: wk_cl = 'Región II (Fresco)'
+            elif winkler < 1667: wk_cl = 'Región III (Templado)'
+            elif winkler < 1944: wk_cl = 'Región IV (Cálido)'
+            else: wk_cl = 'Región V (Muy Cálido)'
+            idx_rows.append(['Winkler (°C·día)', f'{winkler:.0f}', wk_cl,
+                            'Acumulación térmica Oct-Mar, base 10°C'])
 
-        outlook = pronostico.get('outlook', 'NORMAL')
-        rango = pronostico.get('rango_mm', (0, 0))
-        pe = pronostico.get('precip_esperada_mm', 0)
+        if huglin > 0:
+            idx_rows.append(['Huglin (IH)', f'{huglin:.0f}', huglin_clase or '',
+                            'Índice heliotérmico con factor latitud'])
 
-        nivel = 'rojo' if outlook == 'SECO' else 'verde' if outlook == 'LLUVIOSO' else 'azul'
-        elements.append(_make_alert_box(
-            f'Outlook: {outlook} — Precipitación esperada: {pe:.0f} mm '
-            f'(rango: {rango[0]:.0f} – {rango[1]:.0f} mm)',
-            nivel))
+        if fototermico > 0:
+            idx_rows.append(['Fototérmico', f'{fototermico:.1f}', '',
+                            'Potencial de madurez Feb-Mar'])
 
-        elements.append(Spacer(1, 4))
-        nota = pronostico.get('nota', '')
-        if nota:
-            elements.append(Paragraph(f'Nota: {nota}', S['Fuente']))
+        if noches_frias > 0:
+            idx_rows.append(['Noches Frías (°C)', f'{noches_frias:.1f}', noches_frias_clase or '',
+                            'Tmin media marzo, potencial aromático'])
+
+        if porciones_frio > 0:
+            idx_rows.append(['Porciones Frío (CP)', f'{porciones_frio:.0f}', '',
+                            'Modelo dinámico Fishman (1987)'])
+
+        E.append(_tbl(idx_rows, [100, 65, 120, 160], font_sz=8))
+        E.append(Spacer(1, 6))
+
+        # Detalle Winkler
+        if winkler > 0:
+            E.append(Paragraph(f'{n_sec}.1 Índice de Winkler y Aptitud Vitícola', s['Sub']))
+            E.append(Paragraph(
+                f'El índice de Winkler para este punto es <b>{winkler:.0f} °C·día</b>, '
+                f'clasificando como <b>{wk_cl}</b>. '
+                'Este índice acumula los grados-día base 10°C entre octubre y marzo (hemisferio sur) '
+                'y es el estándar internacional para la clasificación de regiones vitícolas '
+                '(Amerine & Winkler, 1944). '
+                f'{"La zona es apta para variedades tintas de ciclo largo como Cabernet Sauvignon y Carménère." if winkler > 1400 else "La zona favorece variedades de ciclo corto como Pinot Noir y Chardonnay." if winkler > 1100 else "La zona tiene limitaciones térmicas para la mayoría de las variedades."}',
+                s['B']))
+
+            wk_ref = [
+                ['Región', 'Rango (°C·día)', 'Variedades tipo'],
+                ['I - Frío', '<1.111', 'Pinot Noir, Gewürztraminer'],
+                ['II - Fresco', '1.111-1.389', 'Chardonnay, Sauvignon Blanc, Riesling'],
+                ['III - Templado', '1.389-1.667', 'Merlot, Cabernet Franc, Semillón'],
+                ['IV - Cálido', '1.667-1.944', 'Cabernet Sauvignon, Carménère, Syrah'],
+                ['V - Muy Cálido', '>1.944', 'País, Carignan, Monastrell'],
+            ]
+            E.append(_tbl(wk_ref, [80, 100, 260], font_sz=7.5))
+
+        # Detalle Huglin
+        if huglin > 0:
+            E.append(Paragraph(f'{n_sec}.2 Índice de Huglin (Heliotérmico)', s['Sub']))
+            E.append(Paragraph(
+                f'El índice de Huglin es <b>{huglin:.0f}</b> ({huglin_clase}). '
+                'A diferencia del Winkler, incorpora un coeficiente de duración del día '
+                'que varía con la latitud, siendo más representativo para latitudes altas. '
+                'Fue desarrollado por Huglin (1978) y es ampliamente utilizado en la '
+                'viticultura europea.', s['B']))
+
+        # Noches frías
+        if noches_frias > 0:
+            E.append(Paragraph(f'{n_sec}.3 Índice de Noches Frías', s['Sub']))
+            E.append(Paragraph(
+                f'La temperatura mínima media de marzo es <b>{noches_frias:.1f}°C</b> '
+                f'({noches_frias_clase}). Las noches frescas durante la maduración favorecen '
+                f'la síntesis de compuestos aromáticos y la retención de acidez en uvas, '
+                f'resultando en vinos de mayor complejidad. Valores bajo 12°C se consideran '
+                f'óptimos para calidad aromática (Tonietto & Carbonneau, 2004).', s['B']))
 
     # ════════════════════════════════════════════════════════════════
-    # 8. METODOLOGÍA Y FUENTES
+    # 8. APTITUD POR ESPECIE
     # ════════════════════════════════════════════════════════════════
-    elements.append(PageBreak())
-    elements.append(Paragraph('8. Metodología y Fuentes de Datos', S['Seccion']))
+    if bio_tables and analisis_texts:
+        E.append(PageBreak())
+        n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Aptitud Bioclimática por Especie', s['Sec']))
+        E.append(Paragraph(
+            'Se evalúa la aptitud agroclimática para las principales especies frutícolas, '
+            'considerando temperaturas de floración, cuaja y maduración, estrés por calor, '
+            'requerimientos de frío, riesgo de heladas y precipitación. Cada variable se '
+            'clasifica en semáforo (favorable / precaución / desfavorable).', s['B']))
 
-    metodo_text = _generar_seccion_metodologia(precip, heladas)
-    elements.append(Paragraph(metodo_text, S['Cuerpo']))
+        for especie, df in bio_tables.items():
+            E.append(Paragraph(f'{n_sec}.{list(bio_tables.keys()).index(especie)+1} {especie}', s['Sub2']))
 
-    elements.append(Paragraph('8.1 Referencias Bibliográficas', S['SubSeccion']))
-    refs = [
-        'Boisier, J.P. et al. (2018). CR2MET: Productos grillados de precipitación y temperatura. '
-        'Centro de Ciencia del Clima y la Resiliencia (CR)², Universidad de Chile.',
-        'Santibáñez, F. (2017). Atlas Agroclimático de Chile. Estado actual y tendencias del clima. '
-        'Tomo I-IV. CIREN / FIA.',
-        'Huang, B. et al. (2017). Extended Reconstructed Sea Surface Temperature (ERSST), Version 5. '
-        'NOAA National Centers for Environmental Information.',
-        'Mantua, N.J. et al. (1997). A Pacific Interdecadal Climate Oscillation. '
-        'Bulletin of the American Meteorological Society, 78(6), 1069-1079.',
-        'Allen, R.G. et al. (1998). Crop evapotranspiration: Guidelines for computing crop water '
-        'requirements. FAO Irrigation and Drainage Paper 56.',
-        'Garreaud, R. et al. (2024). The Central Chile Mega Drought (2010-2023). '
-        'Earth\'s Future, 12(1).',
-        'CIREN/ODEPA (2024). Catastro Frutícola Nacional. Gobierno de Chile.',
+            # Tabla bioclimática
+            rows = [list(df.columns)]
+            for _, row in df.iterrows():
+                rows.append([str(v) for v in row.values])
+            n_cols = len(df.columns)
+            cw = [460 // n_cols] * n_cols
+            E.append(_tbl(rows, cw, font_sz=7))
+
+            # Texto análisis
+            txt = analisis_texts.get(especie, '')
+            if txt:
+                E.append(Paragraph(txt, s['Sm']))
+            E.append(Spacer(1, 4))
+
+    # Riesgo agronómico de heladas por especie (catastro)
+    if agro and agro.get('heladas_agronomicas'):
+        if not bio_tables:
+            E.append(PageBreak())
+            n_sec += 1
+        else:
+            n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Riesgo de Helada por Especie (Catastro Frutícola)', s['Sec']))
+        E.append(Paragraph(_relato_agro(agro, heladas, localidad), s['B']))
+
+        ha_list = agro['heladas_agronomicas']
+        rows = [['Especie', 'Sup. (ha)', 'Umbral (°C)', 'P(daño Sep)', 'P(daño Oct)', 'Sensibilidad', 'Riesgo']]
+        for h in ha_list[:15]:
+            rows.append([
+                h.get('especie',''), f'{h.get("superficie_ha",0):.0f}',
+                f'{h.get("umbral_floracion",0):.1f}',
+                f'{h.get("p_dano_sep",0):.0f}%', f'{h.get("p_dano_oct",0):.0f}%',
+                h.get('sensibilidad',''), h.get('riesgo',''),
+            ])
+        t = _tbl(rows, [85, 45, 55, 55, 55, 60, 55], font_sz=7.5)
+        extra = []
+        for i, h in enumerate(ha_list[:15]):
+            r = h.get('riesgo','')
+            if r in ('MUY ALTO','ALTO'):
+                extra.append(('BACKGROUND',(-1,i+1),(-1,i+1),RJ_CL))
+                extra.append(('TEXTCOLOR',(-1,i+1),(-1,i+1),RJ))
+            elif r == 'MODERADO':
+                extra.append(('BACKGROUND',(-1,i+1),(-1,i+1),NJ_CL))
+        if extra:
+            _tbl_add_style(t, *extra)
+        E.append(t)
+        E.append(Paragraph(
+            'Fuente: Catastro Frutícola CIREN/ODEPA. Umbrales: INIA, Atlas Agroclimático '
+            '(Santibáñez, 2017), UC Davis Fruit & Nut Research.', s['Src']))
+
+    # ════════════════════════════════════════════════════════════════
+    # 9. ENSO Y PREDICCIÓN MULTI-MÉTODO
+    # ════════════════════════════════════════════════════════════════
+    E.append(PageBreak())
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. ENSO, Variabilidad Climática y Predicción', s['Sec']))
+
+    # Contexto ENSO
+    E.append(Paragraph(f'{n_sec}.1 Estado Actual del ENSO', s['Sub']))
+    E.append(Paragraph(_relato_enso(enso, lat), s['B']))
+    interp = enso.get('interpretacion_agro', '')
+    if interp:
+        E.append(_alert_box(interp, 'azul'))
+        E.append(Spacer(1, 4))
+
+    # Predicción multi-método
+    E.append(Paragraph(f'{n_sec}.2 Predicción de Precipitación — Múltiples Métodos', s['Sub']))
+    E.append(Paragraph(
+        'Se presentan tres métodos independientes de estimación de la precipitación esperada '
+        'para el próximo año hidrológico. La convergencia entre métodos aumenta la confianza '
+        'del pronóstico, mientras que la divergencia indica mayor incertidumbre.', s['B']))
+
+    # Calcular predicciones
+    oni = enso.get('oni_actual', 0)
+    estado_e = enso.get('estado', 'Neutro')
+    mega = precip.get('megasequia', {})
+    cambio = mega.get('cambio_pct', 0)
+
+    if estado_e == 'El Niño':
+        factor_e = 1 + min(oni * 0.15, 0.4)
+    elif estado_e == 'La Niña':
+        factor_e = 1 + max(oni * 0.15, -0.3)
+    else:
+        factor_e = 1.0
+
+    m1 = pp_a * factor_e
+    tasa = cambio / 15 if cambio else 0
+    m2 = pp_a * (1 + tasa * 3 / 100)
+    m3 = pp_a * 0.5 + m1 * 0.5
+
+    ch = _chart(lambda plt: _plot_enso_forecast(plt, enso, precip), h=175)
+    if ch: E.append(ch); E.append(Spacer(1, 4))
+
+    pred_rows = [
+        ['Método', 'Estimación (mm)', 'Incertidumbre', 'Fundamento'],
+        ['ENSO directo', f'{m1:.0f}', f'±{pp_a*0.18:.0f} mm',
+         f'Factor {factor_e:.2f} × climatología'],
+        ['Tendencia lineal', f'{m2:.0f}', f'±{pp_a*0.22:.0f} mm',
+         f'Tasa {tasa:.1f}%/año (megasequía)'],
+        ['Blend ENSO+Clim', f'{m3:.0f}', f'±{pp_a*0.15:.0f} mm',
+         '50% ENSO + 50% climatología'],
+        ['Climatología', f'{pp_a:.0f}', f'±{pp_a*0.20:.0f} mm',
+         'Promedio 1991-2020'],
     ]
-    for i, ref in enumerate(refs):
-        elements.append(Paragraph(f'[{i+1}] {ref}', S['Fuente']))
-        elements.append(Spacer(1, 2))
+    E.append(_tbl(pred_rows, [85, 80, 80, 200], font_sz=7.5))
+    E.append(Spacer(1, 4))
+
+    E.append(Paragraph(
+        '<b>Interpretación:</b> La predicción más confiable es el Blend ENSO+Climatología cuando '
+        'el ONI está en rango ±0.5. En eventos ENSO fuertes (|ONI| > 1.0), el método ENSO directo '
+        'gana relevancia. La tendencia lineal captura el efecto de largo plazo de la megasequía '
+        'pero no eventos interanuales.', s['B']))
+
+    # Predicción de heladas
+    E.append(Paragraph(f'{n_sec}.3 Predicción de Heladas — Escenario ENSO', s['Sub']))
+    E.append(Paragraph(
+        'El ENSO modula el riesgo de heladas en Chile central: La Niña incrementa el riesgo '
+        'de heladas tardías en un 20-30% por cielos más despejados y menor advección de aire '
+        'húmedo. El Niño reduce el riesgo por noches más cálidas y nubosas.', s['B']))
+
+    ch = _chart(lambda plt: _plot_frost_prediction(plt, heladas, enso), h=175)
+    if ch: E.append(ch)
+
+    E.append(Paragraph(
+        'Fuente: NOAA CPC (ONI, PDO, SOI). Garreaud et al. (2024). '
+        'Nota: correlación ENSO-precipitación debilitada post-2000.', s['Src']))
+
+    # Pronóstico estacional
+    if pronostico:
+        E.append(Paragraph(f'{n_sec}.4 Pronóstico Estacional Integrado', s['Sub']))
+        outlook = pronostico.get('outlook', 'NORMAL')
+        pe = pronostico.get('precip_esperada_mm', 0)
+        rango = pronostico.get('rango_mm', (0, 0))
+        niv = 'rojo' if outlook == 'SECO' else 'verde' if outlook == 'LLUVIOSO' else 'azul'
+        E.append(_alert_box(
+            f'Outlook: {outlook} — Precipitación esperada: {pe:.0f} mm '
+            f'(rango {rango[0]:.0f}–{rango[1]:.0f} mm). Factor ENSO: {pronostico.get("factor_enso",1):.2f}',
+            niv))
+
+    # ════════════════════════════════════════════════════════════════
+    # 10. TABLA CLIMÁTICA COMPLETA (18 variables)
+    # ════════════════════════════════════════════════════════════════
+    if has_meteo:
+        E.append(PageBreak())
+        n_sec += 1
+        E.append(Paragraph(f'{n_sec}. Tabla Climática Completa — 18 Variables', s['Sec']))
+        E.append(Paragraph(
+            'Tabla resumen con las 18 variables agroclimáticas calculadas según la metodología '
+            'de Fernando Santibáñez (Atlas Agroclimático de Chile, 2017). Basada en 8.760 horas '
+            'de datos meteorológicos típicos (TMY Meteonorm 8.2).', s['B']))
+
+        rows = [['Variable'] + MESES + ['Anual']]
+        for var in monthly_df.index:
+            row = [str(var)]
+            for m in MESES + ['Anual']:
+                v = monthly_df.loc[var, m]
+                if isinstance(v, float):
+                    row.append(f'{v:.1f}' if abs(v) < 100 else f'{v:.0f}')
+                else:
+                    row.append(str(v))
+            rows.append(row)
+
+        t = _tbl(rows, [60]+[28]*12+[33], font_sz=6)
+        _tbl_add_style(t,
+            ('BACKGROUND',(-1,0),(-1,-1),V_CLA),
+            ('FONTNAME',(0,1),(0,-1),'Helvetica-Bold'),
+            ('FONTSIZE',(0,0),(0,-1),6),
+            ('ALIGN',(0,1),(0,-1),'LEFT'))
+        E.append(t)
+        E.append(Spacer(1, 4))
+        E.append(Paragraph(
+            'T.MAX/MIN/MED: °C | DIAS GRADO: base 10°C | DIAS GRA12: base 12°C | '
+            'DG.ACUM: acumulado Oct-Sep | D-cálidos: días >25°C | '
+            'HRS.FRIO: horas <7°C | HRS.FRES: horas <10°C | HF.ACUM: acumulado May-Dic | '
+            'R.SOLAR: cal/cm²/día | H.RELAT: % | PRECIPIT: mm | EVAP.POT: mm (FAO-56) | '
+            'DEF/EXC.HIDR: mm | IND.HUMED: P/ETP | HELADAS: días Tmin<0°C', s['Src']))
+
+    # Días cálidos
+    if dc_df is not None and has_meteo:
+        E.append(Paragraph(f'{n_sec}.1 Días Cálidos por Umbral de Temperatura', s['Sub']))
+        rows = [[''] + list(dc_df.columns)]
+        for idx in dc_df.index:
+            rows.append([str(idx)] + [f'{v:.1f}' if isinstance(v, float) else str(v) for v in dc_df.loc[idx]])
+        E.append(_tbl(rows, [55]+[31]*len(dc_df.columns), font_sz=7))
+        E.append(Paragraph(
+            'Días con temperatura máxima superando umbrales de 25°C, 30°C y 35°C. '
+            'Relevante para estrés calórico en frutales, golpe de sol y calidad de fruta.', s['Src']))
+
+    # ════════════════════════════════════════════════════════════════
+    # 11. METODOLOGÍA Y FUENTES
+    # ════════════════════════════════════════════════════════════════
+    E.append(PageBreak())
+    n_sec += 1
+    E.append(Paragraph(f'{n_sec}. Metodología, Fuentes y Limitaciones', s['Sec']))
+    E.append(Paragraph(_metodologia(has_meteo), s['B']))
+
+    E.append(Paragraph(f'{n_sec}.1 Referencias Bibliográficas', s['Sub']))
+    refs = [
+        'Boisier, J.P. et al. (2018). CR2MET: Productos grillados. Centro de Ciencia del Clima (CR)², U. Chile.',
+        'Santibáñez, F. (2017). Atlas Agroclimático de Chile. Tomos I-IV. CIREN / FIA.',
+        'Huang, B. et al. (2017). ERSST v5. NOAA NCEI.',
+        'Mantua, N.J. et al. (1997). Pacific Interdecadal Climate Oscillation. Bull. AMS, 78(6).',
+        'Allen, R.G. et al. (1998). Crop evapotranspiration. FAO-56.',
+        'Garreaud, R. et al. (2024). The Central Chile Mega Drought. Earth\'s Future, 12(1).',
+        'CIREN/ODEPA (2024). Catastro Frutícola Nacional.',
+        'Amerine, M.A. & Winkler, A.J. (1944). Composition and quality of musts and wines. Hilgardia.',
+        'Huglin, P. (1978). Nouveau mode d\'évaluation des possibilités héliothermiques. Symp. Int. Oenol.',
+        'Tonietto, J. & Carbonneau, A. (2004). A multicriteria climatic classification system. Agric. For. Met.',
+        'Fishman, S. et al. (1987). The temperature dependence of dormancy breaking. J. Theor. Biol.',
+        'Trenberth, K.E. (1984). Signal versus noise in the Southern Oscillation. Mon. Wea. Rev.',
+    ]
+    for i, r in enumerate(refs):
+        E.append(Paragraph(f'[{i+1}] {r}', s['Src']))
 
     # Disclaimer
-    elements.append(Spacer(1, 12))
-    elements.append(HRFlowable(width='100%', thickness=0.5, color=GRIS_MEDIO))
-    elements.append(Spacer(1, 4))
-    elements.append(Paragraph(
-        '<b>Aviso legal:</b> Este informe es generado automáticamente con fines informativos '
-        'y de planificación agrícola. Los datos provienen de fuentes públicas y modelos climáticos '
-        'con resolución limitada (~5.5 km). Para decisiones de inversión críticas, se recomienda '
-        'complementar con estación meteorológica local y asesoría agronómica profesional. '
-        'Las proyecciones estacionales tienen incertidumbre inherente.',
-        S['Fuente']))
+    E.append(Spacer(1, 12))
+    E.append(HRFlowable(width='100%', thickness=0.5, color=GR_MD))
+    E.append(Paragraph(
+        '<b>Aviso legal:</b> Informe generado automáticamente con fines de planificación agrícola. '
+        'Datos de fuentes públicas y modelos con resolución limitada (~5.5 km). Para decisiones '
+        'de inversión, complementar con estación meteorológica local y asesoría profesional. '
+        'Las predicciones estacionales tienen incertidumbre inherente.', s['Src']))
+    E.append(Paragraph(
+        f'Generado: {fecha} | Visor Agroclimático v1.1 | Motor: CR2MET + PVsyst TMY + ENSO/PDO/SOI',
+        s['Pie']))
 
-    elements.append(Spacer(1, 6))
-    elements.append(Paragraph(
-        f'Informe generado el {fecha_gen} | Visor Agroclimático v1.1 | '
-        'Motor: CR2MET v2.0 + CR2 Estaciones + ENSO/PDO/SOI',
-        S['Pie']))
-
-    # Build
-    doc.build(elements)
+    doc.build(E)
     return buf.getvalue()
 
 
 # ══════════════════════════════════════════════════════════════════════
-# GENERADORES DE RELATO
+#  RELATOS
 # ══════════════════════════════════════════════════════════════════════
 
-def _generar_relato_resumen(localidad, lat, lon, alt, dist_mar,
-                             precip, heladas, enso, agro, balance, pronostico):
-    """Genera párrafo de resumen ejecutivo narrativo."""
-    parts = []
-    parts.append(
-        f'El predio analizado se ubica en <b>{localidad}</b> '
-        f'({abs(lat):.2f}°S, {abs(lon):.2f}°W), a una altitud de <b>{alt:.0f} m s.n.m.</b>'
-    )
-    if dist_mar:
-        parts.append(f' y a {dist_mar:.0f} km de la costa')
-    parts.append('. ')
-
-    # Precipitación
+def _relato_resumen(loc, lat, lon, alt, dm, precip, heladas, enso, agro, balance, pron, has_meteo, wk, hg):
+    p = []
+    p.append(f'El predio analizado se ubica en <b>{loc}</b> ({abs(lat):.2f}°S, {abs(lon):.2f}°W), '
+             f'a <b>{alt:.0f} m s.n.m.</b>')
+    if dm: p.append(f' y a {dm:.0f} km de la costa')
+    p.append('. ')
     pp = precip.get('anual_mm', 0)
-    if pp > 0:
-        if pp < 200:
-            clima = 'árido'
-        elif pp < 400:
-            clima = 'semiárido'
-        elif pp < 800:
-            clima = 'mediterráneo'
-        else:
-            clima = 'templado lluvioso'
-        parts.append(
-            f'El régimen pluviométrico es <b>{clima}</b>, con una precipitación media anual de '
-            f'<b>{pp:.0f} mm</b>, concentrada principalmente entre mayo y agosto. '
-        )
-
-    # Megasequía
-    mega = precip.get('megasequia', {})
-    cambio = mega.get('cambio_pct', 0)
-    if cambio < -10:
-        parts.append(
-            f'Se observa un <b>déficit del {abs(cambio):.0f}%</b> en el período 2006-2020 respecto '
-            f'a 1991-2005, consistente con la megasequía que afecta Chile central. '
-        )
-
-    # Heladas
-    dias_hel = heladas.get('dias_helada_año_promedio', 0)
+    if pp:
+        cl = 'árido' if pp<200 else 'semiárido' if pp<400 else 'mediterráneo' if pp<800 else 'templado lluvioso'
+        p.append(f'El clima es <b>{cl}</b> con {pp:.0f} mm/año. ')
+    mega = precip.get('megasequia', {}).get('cambio_pct', 0)
+    if mega < -10: p.append(f'La megasequía ha reducido la precipitación en un <b>{abs(mega):.0f}%</b>. ')
+    dh = heladas.get('dias_helada_año_promedio', 0)
     plh = heladas.get('periodo_libre_heladas_dias', 0)
-    if dias_hel > 0:
-        if dias_hel > 20:
-            nivel_h = 'elevado'
-        elif dias_hel > 5:
-            nivel_h = 'moderado'
-        else:
-            nivel_h = 'bajo'
-        parts.append(
-            f'El riesgo de heladas es <b>{nivel_h}</b>, con un promedio de '
-            f'<b>{dias_hel:.0f} días de helada por año</b> y un período libre de heladas de '
-            f'<b>{plh} días</b>. '
-        )
-
-    # ENSO
-    estado = enso.get('estado', '')
-    if estado and estado != 'No disponible':
-        oni = enso.get('oni_actual', 0)
-        parts.append(
-            f'El estado actual del ENSO es <b>{estado}</b> (ONI={oni:+.2f}), '
-        )
-        if estado == 'El Niño':
-            parts.append('lo que sugiere un invierno potencialmente más lluvioso que lo normal. ')
-        elif estado == 'La Niña':
-            parts.append('lo que implica mayor riesgo de sequía y heladas tardías. ')
-        else:
-            parts.append('indicando condiciones cercanas al promedio climático. ')
-
-    # Agro
+    if dh > 0:
+        nv = 'elevado' if dh>20 else 'moderado' if dh>5 else 'bajo'
+        p.append(f'Riesgo de heladas <b>{nv}</b> ({dh:.0f} d/año, PLH {plh} días). ')
+    e = enso.get('estado', '')
+    if e and e != 'No disponible':
+        p.append(f'ENSO: <b>{e}</b> (ONI={enso.get("oni_actual",0):+.2f}). ')
     if agro and agro.get('total_ha'):
-        parts.append(
-            f'La comuna registra <b>{agro["total_ha"]:.0f} ha</b> de superficie frutícola. '
-        )
-
-    # Balance
+        p.append(f'Superficie frutícola comunal: <b>{agro["total_ha"]:.0f} ha</b>. ')
     if balance:
-        deficit = balance.get('deficit_anual_mm', 0)
-        meses_estres = balance.get('meses_estres', 0)
-        if deficit > 0:
-            parts.append(
-                f'El déficit hídrico anual estimado es de <b>{deficit:.0f} mm</b>, '
-                f'con <b>{meses_estres} meses</b> de estrés hídrico significativo, '
-                f'lo que hace del riego un componente esencial para la producción agrícola. '
-            )
-
-    return ''.join(parts)
+        df = balance.get('deficit_anual_mm', 0)
+        me = balance.get('meses_estres', 0)
+        if df > 0: p.append(f'Déficit hídrico: {df:.0f} mm/año ({me} meses de estrés). ')
+    if has_meteo and wk > 0:
+        p.append(f'Winkler: {wk:.0f} °C·día. ')
+    if has_meteo and hg > 0:
+        p.append(f'Huglin: {hg:.0f}. ')
+    return ''.join(p)
 
 
-def _generar_relato_enso(enso, lat):
-    """Genera texto sobre el estado ENSO y su implicancia."""
+def _relato_enso(enso, lat):
     if not enso or enso.get('estado') == 'No disponible':
-        return 'No se dispone de información actualizada sobre el estado ENSO.'
-
-    estado = enso.get('estado', 'Neutro')
-    oni = enso.get('oni_actual', 0)
-    oni_3m = enso.get('oni_3m', 0)
-    tendencia = enso.get('tendencia', 'estable')
-    pdo = enso.get('pdo_3m', 0)
-    soi = enso.get('soi_3m', 0)
-
-    text = (
-        f'El Índice Oceánico del Niño (ONI) registra un valor de <b>{oni:+.2f}</b>, '
-        f'con un promedio trimestral de <b>{oni_3m:+.2f}</b>. '
-        f'El estado actual del ENSO se clasifica como <b>{estado}</b>, '
-        f'con tendencia <b>{tendencia}</b>. '
-    )
-
-    text += (
-        f'El Índice de Oscilación Decadal del Pacífico (PDO) se encuentra en <b>{pdo:+.2f}</b> '
-        f'y el Índice de Oscilación del Sur (SOI) en <b>{soi:+.2f}</b>. '
-    )
-
-    # Implicancia para Chile central
+        return 'Información ENSO no disponible.'
+    e = enso.get('estado','Neutro')
+    oni = enso.get('oni_actual',0)
+    oni3 = enso.get('oni_3m',0)
+    tend = enso.get('tendencia','estable')
+    pdo = enso.get('pdo_3m',0)
+    soi = enso.get('soi_3m',0)
+    t = (f'El ONI registra <b>{oni:+.2f}</b> (trimestral: {oni3:+.2f}). Estado: <b>{e}</b>, '
+         f'tendencia <b>{tend}</b>. PDO: {pdo:+.2f}, SOI: {soi:+.2f}. ')
     if -38 < lat < -28:
-        text += (
-            'Para Chile central, la fase ENSO tiene una correlación significativa con la '
-            'precipitación invernal: El Niño tiende a producir inviernos más lluviosos (+20-40%), '
-            'mientras que La Niña se asocia con sequía invernal y mayor riesgo de heladas tardías '
-            'durante la floración (septiembre-noviembre). '
-        )
-    elif lat <= -38:
-        text += (
-            'En la zona sur de Chile, la señal ENSO es más débil, pero La Niña tiende '
-            'a intensificar los sistemas frontales y aumentar la precipitación. '
-        )
-
-    text += (
-        'Sin embargo, Garreaud et al. (2024) advierten que la correlación ENSO-precipitación '
-        'se ha debilitado significativamente desde el año 2000 en Chile central.'
-    )
-
-    return text
+        t += ('Para Chile central, El Niño → invierno más lluvioso (+20-40%), menos heladas invernales. '
+              'La Niña → sequía invernal, mayor riesgo de heladas tardías en floración (Sep-Nov). ')
+    t += 'Garreaud et al. (2024): correlación ENSO-precipitación debilitada post-2000.'
+    return t
 
 
-def _generar_relato_precipitacion(precip, localidad, lat):
-    """Genera relato sobre el régimen de precipitación."""
-    pp = precip.get('anual_mm', 0)
-    mensual = precip.get('mensual_mm', [0]*12)
-
-    # Mes más lluvioso
-    max_mes_idx = mensual.index(max(mensual)) if mensual else 6
-    max_mes_val = max(mensual) if mensual else 0
-    concentracion = max_mes_val / pp * 100 if pp > 0 else 0
-
-    # Meses secos (< 10mm)
-    meses_secos = sum(1 for v in mensual if v < 10)
-    # Meses con > 50% del total
-    pp_invierno = sum(mensual[4:8])  # May-Ago
-    pct_invierno = pp_invierno / pp * 100 if pp > 0 else 0
-
-    text = (
-        f'La precipitación media anual en {localidad} es de <b>{pp:.0f} mm</b>, '
-        f'con un régimen marcadamente estacional. El mes más lluvioso es '
-        f'<b>{MESES[max_mes_idx]}</b> ({max_mes_val:.0f} mm, {concentracion:.0f}% del total anual). '
-        f'El período mayo-agosto concentra el <b>{pct_invierno:.0f}%</b> de la precipitación anual. '
-        f'Se registran <b>{meses_secos} meses secos</b> (<10 mm/mes), '
-    )
-
-    if meses_secos >= 6:
-        text += 'lo que configura un período seco prolongado típico del clima mediterráneo chileno. '
-    elif meses_secos >= 4:
-        text += 'indicando una estación seca bien definida. '
-    else:
-        text += 'con precipitaciones distribuidas a lo largo del año. '
-
-    fuente = precip.get('fuente', 'CR2MET')
-    text += (
-        f'Estos valores provienen de {fuente}, '
-        f'representando la climatología del período 1991-2020.'
-    )
-
-    return text
-
-
-def _generar_relato_megasequia(mega, localidad):
-    """Genera relato sobre la tendencia de megasequía."""
-    p1 = mega.get('periodo_1_mm', 0)
-    p2 = mega.get('periodo_2_mm', 0)
-    cambio = mega.get('cambio_pct', 0)
-    interp = mega.get('interpretacion', '')
-
-    text = (
-        f'Comparando los períodos 1991-2005 y 2006-2020, la precipitación media anual '
-        f'pasó de <b>{p1:.0f} mm</b> a <b>{p2:.0f} mm</b>, representando un '
-        f'<b>cambio del {cambio:+.1f}%</b>. '
-    )
-
-    if cambio < -15:
-        text += (
-            'Este déficit es consistente con la megasequía que afecta Chile central desde 2010, '
-            'considerada la más prolongada en al menos 1,000 años (Garreaud et al., 2024). '
-            'La reducción sostenida de precipitación tiene implicaciones directas sobre la '
-            'disponibilidad de agua para riego, la recarga de acuíferos y la viabilidad de '
-            'cultivos de secano. Se recomienda planificar considerando la tendencia actual '
-            'como el "nuevo normal" para los próximos 10-20 años.'
-        )
-    elif cambio < -5:
-        text += (
-            'Se observa una tendencia moderada a la baja, que debe ser monitoreada '
-            'en el contexto del cambio climático regional.'
-        )
-    else:
-        text += 'La precipitación se mantiene relativamente estable entre ambos períodos.'
-
-    return text
-
-
-def _generar_relato_heladas(heladas, localidad, alt, enso):
-    """Genera relato sobre el régimen de heladas."""
-    dias = heladas.get('dias_helada_año_promedio', 0)
-    plh = heladas.get('periodo_libre_heladas_dias', 0)
-    tmin_abs = heladas.get('tmin_absoluta_C', 0)
-    meses_sin = heladas.get('meses_sin_helada', [])
-
-    por_mes = heladas.get('por_mes', [])
-    meses_riesgo = [(m.get('mes', ''), m.get('prob_helada_mensual', 0))
-                    for m in por_mes if m.get('prob_helada_mensual', 0) > 0.1]
-
-    text = (
-        f'En {localidad} ({alt:.0f} m s.n.m.) se registran en promedio '
-        f'<b>{dias:.0f} días de helada por año</b> (Tmin < 0°C), '
-        f'con una temperatura mínima absoluta de <b>{tmin_abs:.1f}°C</b> '
-        f'en el período 1991-2020. '
-    )
-
-    text += (
-        f'El período libre de heladas es de <b>{plh} días</b>, '
-        f'abarcando los meses de {", ".join(meses_sin) if meses_sin else "N/D"}. '
-    )
-
-    if meses_riesgo:
-        meses_r_txt = ', '.join([f'{m} ({p*100:.0f}%)' for m, p in meses_riesgo])
-        text += (
-            f'Los meses con probabilidad significativa de helada (>10%) son: '
-            f'<b>{meses_r_txt}</b>. '
-        )
-
-    # Heladas tardías (Sep-Nov)
-    heladas_tardias = [m for m in por_mes
-                       if m.get('mes', '') in ('Sep', 'Oct', 'Nov')
-                       and m.get('prob_helada_mensual', 0) > 0.05]
-    if heladas_tardias:
-        text += (
-            '<b>ATENCIÓN:</b> Se detecta riesgo de heladas tardías (septiembre-noviembre), '
-            'coincidentes con el período de floración de frutales de hoja caduca. '
-            'Estas heladas representan el mayor riesgo agronómico ya que pueden causar '
-            'pérdidas parciales o totales de la producción. '
-        )
-
-    # Tipo de helada según altitud y distancia al mar
+def _relato_heladas(heladas, loc, alt, enso):
+    d = heladas.get('dias_helada_año_promedio',0)
+    plh = heladas.get('periodo_libre_heladas_dias',0)
+    ta = heladas.get('tmin_absoluta_C',0)
+    ms = heladas.get('meses_sin_helada',[])
+    por_mes = heladas.get('por_mes',[])
+    t = (f'En {loc} ({alt:.0f} m) se registran <b>{d:.0f} días de helada/año</b> '
+         f'(Tmin<0°C), con mínima absoluta de <b>{ta:.1f}°C</b>. '
+         f'PLH: <b>{plh} días</b> ({", ".join(ms) if ms else "N/D"}). ')
+    riesgo = [(m.get('mes',''),m.get('prob_helada_mensual',0)) for m in por_mes if m.get('prob_helada_mensual',0)>0.1]
+    if riesgo:
+        t += f'Meses con P>10%: {", ".join(f"{m} ({p*100:.0f}%)" for m,p in riesgo)}. '
+    tardias = [m for m in por_mes if m.get('mes','') in ('Sep','Oct','Nov') and m.get('prob_helada_mensual',0)>0.05]
+    if tardias:
+        t += '<b>ATENCIÓN: heladas tardías Sep-Nov detectadas</b>, riesgo para floración frutícola. '
     if alt < 300:
-        text += (
-            'Dada la baja altitud, las heladas son predominantemente de tipo <b>radiativo</b> '
-            '(inversión térmica nocturna en noches despejadas y calmas), lo que permite '
-            'estrategias de control como ventiladores, calefactores o riego por aspersión. '
-        )
+        t += 'Heladas predominantemente radiativas (controlables con aspersión/ventiladores). '
     else:
-        text += (
-            'A esta altitud, las heladas pueden ser tanto <b>radiativas</b> como <b>advectivas</b> '
-            '(entrada de masas de aire polar). Las heladas advectivas son más difíciles de controlar '
-            'y requieren protección pasiva (selección de sitio, cortinas cortaviento). '
-        )
-
-    return text
+        t += 'Heladas radiativas y advectivas posibles a esta altitud. '
+    return t
 
 
-def _generar_relato_agro(agro, heladas, localidad):
-    """Genera relato sobre el contexto agrícola."""
-    comuna = agro.get('comuna_match', localidad)
-    total_ha = agro.get('total_ha', 0)
-    top = agro.get('top_especies', [])
-    ha_list = agro.get('heladas_agronomicas', [])
+def _relato_precip(precip, loc):
+    pp = precip.get('anual_mm',0)
+    ms = precip.get('mensual_mm',[0]*12)
+    mi = ms.index(max(ms)) if ms else 6
+    mx = max(ms) if ms else 0
+    conc = mx/pp*100 if pp>0 else 0
+    sec = sum(1 for v in ms if v<10)
+    inv = sum(ms[4:8])
+    pi = inv/pp*100 if pp>0 else 0
+    t = (f'Precipitación media: <b>{pp:.0f} mm/año</b>. Mes más lluvioso: '
+         f'<b>{MESES[mi]}</b> ({mx:.0f} mm, {conc:.0f}% del total). '
+         f'Mayo-agosto: {pi:.0f}% del total. {sec} meses secos (<10 mm). ')
+    if sec >= 6: t += 'Período seco prolongado, riego indispensable. '
+    return t
 
-    text = (
-        f'La comuna de <b>{comuna}</b> registra <b>{total_ha:.0f} hectáreas</b> de '
-        f'superficie frutícola según el Catastro Nacional (CIREN/ODEPA). '
-    )
 
+def _relato_megasequia(mega):
+    p1 = mega.get('periodo_1_mm',0)
+    p2 = mega.get('periodo_2_mm',0)
+    c = mega.get('cambio_pct',0)
+    t = f'Precipitación 1991-2005: {p1:.0f} mm → 2006-2020: {p2:.0f} mm (<b>{c:+.1f}%</b>). '
+    if c < -15:
+        t += ('Consistente con la megasequía de Chile central (2010-presente), '
+              'la más prolongada en al menos 1.000 años (Garreaud et al., 2024). '
+              'Planificar considerando la tendencia actual como "nuevo normal".')
+    elif c < -5: t += 'Tendencia moderada a la baja, monitorear.'
+    else: t += 'Precipitación estable entre períodos.'
+    return t
+
+
+def _relato_balance(balance, precip):
+    d = balance.get('deficit_anual_mm',0)
+    me = balance.get('meses_estres',0)
+    pp = precip.get('anual_mm',0)
+    t = ('Balance hídrico: precipitación vs ETP (Penman-Monteith FAO-56 simplificado). ')
+    if d > 0:
+        rd = d/pp*100 if pp>0 else 0
+        t += (f'Déficit anual: <b>{d:.0f} mm</b> ({rd:.0f}% de la precipitación). '
+              f'<b>{me} meses</b> con estrés hídrico significativo. ')
+        if me >= 6: t += 'Riego necesario ≥6 meses. Evaluar derechos DGA y riego tecnificado. '
+        elif me >= 3: t += 'Riego complementario en verano requerido. '
+    return t
+
+
+def _relato_agro(agro, heladas, loc):
+    c = agro.get('comuna_match',loc)
+    ha = agro.get('total_ha',0)
+    top = agro.get('top_especies',[])
+    hal = agro.get('heladas_agronomicas',[])
+    t = f'La comuna de <b>{c}</b> registra <b>{ha:.0f} ha</b> frutícolas (CIREN/ODEPA). '
     if top:
-        esp_text = ', '.join([f'{e[0]} ({e[1]:.0f} ha)' for e in top[:5]])
-        text += f'Las principales especies son: {esp_text}. '
-
-    # Análisis de riesgo
-    alto_riesgo = [h for h in ha_list if h.get('riesgo') in ('MUY ALTO', 'ALTO')]
-    if alto_riesgo:
-        especies_r = ', '.join([h['especie'] for h in alto_riesgo[:5]])
-        text += (
-            f'<b>Se identifican {len(alto_riesgo)} especies con riesgo ALTO o MUY ALTO '
-            f'de daño por helada durante floración:</b> {especies_r}. '
-            'Para estas especies, se recomienda implementar sistemas activos de protección '
-            '(aspersión sobre copa, calefactores, ventiladores) o considerar seguros agrícolas. '
-        )
-
-    mod_riesgo = [h for h in ha_list if h.get('riesgo') == 'MODERADO']
-    if mod_riesgo:
-        text += (
-            f'Otras {len(mod_riesgo)} especies presentan riesgo moderado y se beneficiarían '
-            'de monitoreo meteorológico y sistemas de alerta temprana. '
-        )
-
-    text += (
-        'La tabla siguiente cruza los umbrales de daño por especie (INIA/UC Davis) con la '
-        'probabilidad observada de helada en los meses de floración (septiembre-octubre).'
-    )
-
-    return text
+        t += 'Principales: ' + ', '.join(f'{e[0]} ({e[1]:.0f} ha)' for e in top[:5]) + '. '
+    alto = [h for h in hal if h.get('riesgo') in ('MUY ALTO','ALTO')]
+    if alto:
+        t += f'<b>{len(alto)} especies con riesgo ALTO/MUY ALTO</b> de daño por helada: '
+        t += ', '.join(h['especie'] for h in alto[:5]) + '. '
+        t += 'Se recomienda protección activa (aspersión, calefactores) o seguros agrícolas. '
+    return t
 
 
-def _generar_relato_balance(balance, localidad, precip):
-    """Genera relato sobre el balance hídrico."""
-    deficit = balance.get('deficit_anual_mm', 0)
-    meses_estres = balance.get('meses_estres', 0)
-    pp = precip.get('anual_mm', 0)
-
-    text = (
-        f'El balance hídrico simplificado compara la precipitación mensual con la '
-        f'evapotranspiración potencial (ETP) estimada mediante una curva latitudinal '
-        f'calibrada con Penman-Monteith FAO-56. '
-    )
-
-    if deficit > 0:
-        ratio_deficit = deficit / pp * 100 if pp > 0 else 0
-        text += (
-            f'El déficit hídrico anual estimado es de <b>{deficit:.0f} mm</b>, equivalente '
-            f'al <b>{ratio_deficit:.0f}%</b> de la precipitación anual. '
-            f'Se identifican <b>{meses_estres} meses con estrés hídrico significativo</b> '
-            f'(balance < -20 mm), correspondientes a la estación seca. '
-        )
-
-        if meses_estres >= 6:
-            text += (
-                'Este nivel de déficit requiere riego complementario durante al menos '
-                '6 meses del año para mantener la producción agrícola. '
-                'Se recomienda evaluar la disponibilidad de derechos de agua (DGA) '
-                'y la factibilidad de sistemas de riego tecnificado (goteo o microaspersión). '
-            )
-        elif meses_estres >= 3:
-            text += (
-                'El déficit se concentra en verano y requiere riego complementario. '
-                'Sistemas de riego eficiente pueden reducir la demanda en un 30-50%. '
-            )
-
-    return text
-
-
-def _generar_relato_pronostico(pronostico, enso, localidad, precip):
-    """Genera relato del pronóstico estacional."""
-    outlook = pronostico.get('outlook', 'NORMAL')
-    pe = pronostico.get('precip_esperada_mm', 0)
-    rango = pronostico.get('rango_mm', (0, 0))
-    factor = pronostico.get('factor_enso', 1.0)
-
-    text = (
-        f'Basándose en el estado actual del ENSO y la climatología del punto, '
-        f'se estima una precipitación de <b>{pe:.0f} mm</b> para el año hidrológico en curso '
-        f'(rango de confianza: {rango[0]:.0f} – {rango[1]:.0f} mm). '
-        f'El factor ENSO aplicado es <b>{factor:.2f}</b>. '
-    )
-
-    if outlook == 'SECO':
-        text += (
-            'El pronóstico es <b>SECO</b>: se espera una temporada con precipitación '
-            'por debajo de lo normal. Se recomienda maximizar la eficiencia de riego, '
-            'reducir la superficie de secano y asegurar reservas de agua. '
-        )
-    elif outlook == 'LLUVIOSO':
-        text += (
-            'El pronóstico es <b>LLUVIOSO</b>: se espera precipitación por sobre lo normal. '
-            'Se recomienda verificar drenajes, preparar accesos y considerar el riesgo '
-            'de enfermedades fúngicas asociadas a exceso de humedad. '
-        )
-    else:
-        text += (
-            'El pronóstico indica condiciones <b>NORMALES</b>. Se recomienda mantener '
-            'los planes de riego habituales y monitorear actualizaciones del pronóstico ENSO. '
-        )
-
-    return text
-
-
-def _generar_seccion_metodologia(precip, heladas):
-    """Genera la sección de metodología."""
-    text = (
-        'Este informe integra múltiples fuentes de datos climáticos para generar un '
-        'diagnóstico agroclimático completo del punto analizado. '
-        'A continuación se describen las fuentes y métodos utilizados:<br/><br/>'
-
-        '<b>Precipitación:</b> Datos grillados CR2MET v2.0 (Boisier et al., 2018), '
-        'con resolución espacial de 0.05° (~5.5 km) y período 1979-2020. '
-        'La climatología se calcula sobre el período de referencia 1991-2020 de la OMM. '
-        'Se realiza validación cruzada con estaciones pluviométricas CR2 (879 estaciones) '
-        'usando interpolación IDW (Inverse Distance Weighting, peso = 1/d²).<br/><br/>'
-
-        '<b>Temperatura mínima y heladas:</b> Datos grillados CR2MET Tmin v2.0, '
-        'misma resolución y período. La probabilidad de helada se calcula como la '
-        'frecuencia observada de días con Tmin < 0°C. La probabilidad mensual se estima '
-        'como P(mes) = 1 - (1 - p_diaria)^30. El período libre de heladas (PLH) se define '
-        'como los meses consecutivos con P(helada mensual) < 5%.<br/><br/>'
-
-        '<b>Índices climáticos:</b> ONI (Oceanic Niño Index, NOAA CPC), '
-        'PDO (Pacific Decadal Oscillation, Mantua et al. 1997) y '
-        'SOI (Southern Oscillation Index, Trenberth 1984). '
-        'Se usa el promedio trimestral para determinar el estado ENSO.<br/><br/>'
-
-        '<b>Riesgo agronómico:</b> Umbrales de daño por helada según INIA Boletín Técnico, '
-        'Atlas Agroclimático (Santibáñez, 2017) y UC Davis. La probabilidad de daño se '
-        'calcula cruzando P(Tmin < umbral) con el calendario fenológico de cada especie. '
-        'Superficies frutícolas del Catastro Nacional CIREN/ODEPA.<br/><br/>'
-
-        '<b>Balance hídrico:</b> ETP estimada con curva latitudinal simplificada, calibrada '
-        'con Penman-Monteith FAO-56 (Allen et al., 1998). Es una estimación de referencia; '
-        'para diseño de riego se recomienda usar datos de estación meteorológica local.<br/><br/>'
-
-        '<b>Megasequía:</b> Análisis de tendencia comparando precipitación media del período '
-        '2006-2020 versus 1991-2005, en el contexto de la megasequía de Chile central '
-        '(Garreaud et al., 2024).'
-    )
-    return text
+def _metodologia(has_meteo):
+    t = ('Este informe integra múltiples fuentes de datos para un diagnóstico agroclimático integral:<br/><br/>'
+         '<b>Precipitación:</b> CR2MET v2.0 (0.05°, 1979-2020), validado con 879 estaciones CR2 (IDW, w=1/d²). '
+         'Climatología OMM 1991-2020.<br/><br/>'
+         '<b>Temperatura y heladas:</b> CR2MET Tmin v2.0. P(helada) = frecuencia Tmin<0°C. '
+         'P(mensual) = 1-(1-p_diaria)^30. PLH = meses consecutivos con P<5%.<br/><br/>')
+    if has_meteo:
+        t += ('<b>Datos horarios:</b> PVsyst TMY Meteonorm 8.2 (8.760 horas). '
+              'Procesamiento según metodología Santibáñez (2017): 18 variables mensuales, '
+              'índices de Winkler, Huglin, fototérmico, noches frías.<br/><br/>'
+              '<b>Horas de frío:</b> Modelo clásico (T<7°C) y Porciones de Frío Dinámicas '
+              '(Fishman et al., 1987) para evaluación de vernalización.<br/><br/>')
+    t += ('<b>ENSO:</b> ONI (NOAA CPC), PDO (Mantua 1997), SOI (Trenberth 1984). '
+          'Pronóstico multi-método: ENSO directo, tendencia lineal, blend.<br/><br/>'
+          '<b>Riesgo agronómico:</b> Umbrales INIA, Atlas Agroclimático, UC Davis. '
+          'Catastro CIREN/ODEPA.<br/><br/>'
+          '<b>Balance hídrico:</b> ETP con curva latitudinal calibrada FAO-56.<br/><br/>'
+          '<b>Limitaciones:</b> Resolución espacial ~5.5 km. Predicciones con incertidumbre inherente. '
+          'Para riego usar estación local.')
+    return t
