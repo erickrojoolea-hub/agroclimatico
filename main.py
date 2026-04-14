@@ -1789,6 +1789,30 @@ if show_avanzado and st.session_state.get('avanzado_processed') and st.session_s
         else:
             st.info("Pronostico estacional no disponible.")
 
+    # ── Botón descarga PDF Avanzado ──────────────────────────────────
+    st.markdown("---")
+    try:
+        from avanzado_pdf_generator import generate_avanzado_pdf
+        with st.spinner("Generando informe PDF avanzado..."):
+            av_pdf_bytes = generate_avanzado_pdf(
+                localidad=av.get('comuna', f"{av['lat']:.4f}, {av['lon']:.4f}"),
+                lat=av['lat'],
+                lon=av['lon'],
+                alt=av.get('alt', 0),
+                avanzado_report=av,
+            )
+        nombre_loc = av.get('comuna', 'punto').replace(' ', '_')
+        st.download_button(
+            label="Descargar Informe Avanzado (PDF)",
+            data=av_pdf_bytes,
+            file_name=f"Informe_Avanzado_{nombre_loc}.pdf",
+            mime="application/pdf",
+            key="download_avanzado_pdf",
+            type="primary",
+        )
+    except Exception as e:
+        st.error(f"Error generando PDF avanzado: {e}")
+
 
 # =============================================================================
 # RESULTADOS: INFORME METEOROLOGICO (debajo del mapa, full width)
