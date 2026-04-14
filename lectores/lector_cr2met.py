@@ -40,6 +40,229 @@ CACHE_DIR = os.path.join(_PROJECT_ROOT, 'datos_precipitacion')
 PR_CACHE = _find_cache('cr2met_climatologia_puntos.json')
 TMIN_CACHE = _find_cache('cr2met_tmin_heladas_cache.json')
 
+# Caches densos (grilla completa pre-procesada)
+PR_GRID_CACHE = _find_cache('cr2met_precipitacion_grilla.json')
+HELADAS_GRID_CACHE = _find_cache('cr2met_heladas_grilla.json')
+ESTACIONES_CLIM_CACHE = _find_cache('cr2_estaciones_climatologia.json')
+
+# Caches en memoria (se cargan una vez)
+_pr_grid_data = None
+_heladas_grid_data = None
+_estaciones_clim_data = None
+
+
+def _haversine_simple(lat1, lon1, lat2, lon2):
+    """Distancia aproximada en km (fórmula rápida)."""
+    import math
+    dlat = (lat2 - lat1) * 111.0
+    dlon = (lon2 - lon1) * 111.0 * abs(math.cos(math.radians(lat1)))
+    return (dlat**2 + dlon**2) ** 0.5
+
+
+def _cargar_grilla_precipitacion():
+    """Carga grilla densa de precipitación (lazy, una sola vez)."""
+    global _pr_grid_data
+    if _pr_grid_data is not None:
+        return _pr_grid_data
+    if os.path.exists(PR_GRID_CACHE):
+        with open(PR_GRID_CACHE, 'r', encoding='utf-8') as f:
+            _pr_grid_data = json.load(f)
+        return _pr_grid_data
+    return None
+
+
+def _cargar_grilla_heladas():
+    """Carga grilla densa de heladas (lazy, una sola vez)."""
+    global _heladas_grid_data
+    if _heladas_grid_data is not None:
+        return _heladas_grid_data
+    if os.path.exists(HELADAS_GRID_CACHE):
+        with open(HELADAS_GRID_CACHE, 'r', encoding='utf-8') as f:
+            _heladas_grid_data = json.load(f)
+        return _heladas_grid_data
+    return None
+
+
+def _cargar_estaciones_climatologia():
+    """Carga climatologías pre-calculadas de estaciones CR2 (lazy)."""
+    global _estaciones_clim_data
+    if _estaciones_clim_data is not None:
+        return _estaciones_clim_data
+    if os.path.exists(ESTACIONES_CLIM_CACHE):
+        with open(ESTACIONES_CLIM_CACHE, 'r', encoding='utf-8') as f:
+            _estaciones_clim_data = json.load(f)
+        return _estaciones_clim_data
+    return None
+
+
+def precipitacion_grilla_punto(lat, lon, max_dist_km=15):
+    """
+    Obtiene climatología de precipitación desde la grilla densa pre-procesada.
+    Usa IDW con los 4 puntos más cercanos de la grilla.
+
+    Retorna: dict compatible con el formato existente, o None
+    """
+    grid = _cargar_grilla_precipitacion()
+    if not grid or 'puntos' not in grid:
+        return None
+
+    puntos = grid['puntos']
+
+    # Encontrar los 4 puntos más cercanos
+    cercanos = []
+    for p in puntos:
+        d = _haversine_simple(lat, lon, p.get('lat_real', p['lat']), p.get('lon_real', p['lon']))
+        if d < max_dist_km:
+            cercanos.append((d, p))
+
+    if not cercanos:
+        return None
+
+    cercanos.sort(key=lambda x: x[0])
+    cercanos = cercanos[:4]
+
+    # Si el punto más cercano está a <1km, usar directamente
+    if cercanos[0][0] < 1.0:
+        p = cercanos[0][1]
+        return p['precip_monthly_mm'], p['precip_annual_mm'], p.get('stats_anuales'), p.get('extremos_diarios')
+
+    # IDW con peso = 1/d²
+    monthly = [0.0] * 12
+    peso_total = 0
+    annual_vals = []
+
+    for d, p in cercanos:
+        w = 1.0 / max(d, 0.01) ** 2
+        peso_total += w
+        for m in range(12):
+            monthly[m] += p['precip_monthly_mm'][m] * w
+        annual_vals.append(p['precip_annual_mm'])
+
+    monthly = [round(v / peso_total, 1) for v in monthly]
+    annual = round(sum(monthly), 1)
+
+    # Stats del punto más cercano (no se interpolan bien)
+    stats = cercanos[0][1].get('stats_anuales')
+    extremos = cercanos[0][1].get('extremos_diarios')
+
+    return monthly, annual, stats, extremos
+
+
+def climatologia_mensual_punto_cache(lat, lon, variable='pr'):
+    """
+    Wrapper: intenta obtener climatología desde cache denso,
+    si no existe usa NetCDF directamente.
+
+    Retorna: lista de 12 valores [ene..dic]
+    """
+    if variable == 'pr':
+        result = precipitacion_grilla_punto(lat, lon)
+        if result:
+            return result[0]  # solo monthly
+
+    # Fallback a NetCDF
+    nc_path = PR_NC if variable == 'pr' else TMIN_NC
+    if os.path.exists(nc_path):
+        return climatologia_mensual_punto(nc_path, variable, lat, lon)
+
+    return None
+
+
+def precipitacion_completa_punto(lat, lon):
+    """
+    Obtiene toda la info de precipitación para un punto:
+    mensual, anual, stats, extremos, megasequía.
+    Usa grilla densa primero, NetCDF como fallback.
+
+    Retorna: dict con toda la información, o None
+    """
+    # 1. Intentar grilla densa
+    result = precipitacion_grilla_punto(lat, lon)
+    if result:
+        monthly, annual, stats, extremos = result
+        return {
+            'mensual_mm': monthly,
+            'anual_mm': annual,
+            'stats_anuales': stats,
+            'extremos_diarios': extremos,
+            'fuente': 'CR2MET grillado (cache denso, 0.1°)',
+        }
+
+    # 2. Fallback: NetCDF directo
+    if tiene_precipitacion():
+        monthly = climatologia_mensual_punto(PR_NC, 'pr', lat, lon)
+        ext = stats_extremos_punto(PR_NC, 'pr', lat, lon)
+        return {
+            'mensual_mm': monthly,
+            'anual_mm': round(sum(monthly), 1),
+            'stats_anuales': None,
+            'extremos_diarios': ext,
+            'fuente': 'CR2MET grillado (NetCDF directo)',
+        }
+
+    return None
+
+
+def heladas_grilla_punto(lat, lon, max_dist_km=15):
+    """
+    Obtiene datos de heladas desde la grilla densa pre-procesada.
+    Usa el punto más cercano (no interpola heladas, es más preciso).
+
+    Retorna: dict compatible con heladas_reales_punto(), o None
+    """
+    grid = _cargar_grilla_heladas()
+    if not grid or 'puntos' not in grid:
+        return None
+
+    puntos = grid['puntos']
+
+    # Buscar punto más cercano
+    mejor = None
+    mejor_dist = float('inf')
+
+    for key, p in puntos.items():
+        d = _haversine_simple(lat, lon, p.get('lat_real', p['lat']), p.get('lon_real', p['lon']))
+        if d < mejor_dist:
+            mejor_dist = d
+            mejor = p
+
+    if mejor and mejor_dist < max_dist_km:
+        # Adaptar campos para compatibilidad con formatos existentes
+        por_mes_compat = []
+        for m in mejor['por_mes']:
+            mc = dict(m)
+            if 'tmin_min_abs_C' in mc and 'tmin_minima_abs_C' not in mc:
+                mc['tmin_minima_abs_C'] = mc['tmin_min_abs_C']
+            if 'dias_helada_año' in mc and 'dias_helada_por_año' not in mc:
+                mc['dias_helada_por_año'] = mc['dias_helada_año']
+            por_mes_compat.append(mc)
+
+        # Reconstruir meses_sin_helada si fue removido en compresión
+        meses_sin = mejor.get('meses_sin_helada')
+        if meses_sin is None:
+            meses_sin = [pm['mes'] for pm in por_mes_compat
+                        if pm.get('prob_helada_mensual', 1) < 0.05]
+
+        periodo = mejor.get('periodo', '1991-2020')
+
+        return {
+            'fuente': mejor.get('fuente', 'CR2MET_tmin_v2.0_REAL'),
+            'periodo': periodo,
+            'por_mes': por_mes_compat,
+            'tmin_absoluta_C': mejor.get('tmin_absoluta_C'),
+            'dias_helada_año_promedio': mejor.get('dias_helada_año_promedio'),
+            'periodo_libre_heladas_dias': mejor.get('periodo_libre_heladas_dias',
+                                                     len(meses_sin) * 30),
+            'meses_sin_helada': meses_sin,
+            'dist_grilla_km': round(mejor_dist, 1),
+            'metodologia': (
+                f"Cache denso CR2MET v2.0, punto más cercano a {mejor_dist:.1f} km. "
+                f"Período {periodo}."
+            ),
+        }
+
+    return None
+
 
 def tiene_precipitacion():
     """Verifica si el archivo de precipitación CR2MET existe."""
@@ -275,7 +498,7 @@ def cargar_cache_tmin():
 
 def heladas_punto_cache_o_netcdf(lat, lon, nombre=None, max_dist_km=10):
     """
-    Busca heladas para un punto: primero en cache, luego en NetCDF.
+    Busca heladas para un punto: cache comunas → grilla densa → NetCDF.
 
     Parámetros:
         lat, lon: coordenadas del punto
@@ -284,19 +507,17 @@ def heladas_punto_cache_o_netcdf(lat, lon, nombre=None, max_dist_km=10):
 
     Retorna: dict con datos de heladas, o None
     """
-    # 1. Buscar en cache por nombre exacto
+    # 1. Buscar en cache por nombre exacto (168 comunas)
     cache = cargar_cache_tmin()
     if cache and 'puntos' in cache:
         if nombre and nombre in cache['puntos']:
             return cache['puntos'][nombre]
 
-        # 2. Buscar punto más cercano en cache
+        # 2. Buscar punto más cercano en cache de comunas
         mejor = None
         mejor_dist = float('inf')
         for pnombre, pdata in cache['puntos'].items():
-            dlat = (pdata['lat'] - lat) * 111.0
-            dlon = (pdata['lon'] - lon) * 111.0 * abs(np.cos(np.radians(lat)))
-            dist = (dlat**2 + dlon**2) ** 0.5
+            dist = _haversine_simple(lat, lon, pdata['lat'], pdata['lon'])
             if dist < mejor_dist:
                 mejor_dist = dist
                 mejor = pdata
@@ -304,7 +525,12 @@ def heladas_punto_cache_o_netcdf(lat, lon, nombre=None, max_dist_km=10):
         if mejor and mejor_dist < max_dist_km:
             return mejor
 
-    # 3. Fallback: leer NetCDF directamente
+    # 3. Buscar en grilla densa (miles de puntos, ~11km resolución)
+    grilla_result = heladas_grilla_punto(lat, lon, max_dist_km=max_dist_km)
+    if grilla_result:
+        return grilla_result
+
+    # 4. Fallback: leer NetCDF directamente
     if tiene_temperatura():
         return heladas_reales_punto(lat, lon)
 

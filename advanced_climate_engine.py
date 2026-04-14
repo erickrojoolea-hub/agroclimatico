@@ -112,20 +112,38 @@ def generar_informe_avanzado(lat: float, lon: float, alt: Optional[float] = None
         informe['errores'].append(f"ENSO: {e}")
         informe['secciones']['enso'] = {'estado': 'No disponible', 'oni_actual': 0}
 
-    # ── 3. Precipitación CR2MET (mejor fuente) ───────────────────────────
+    # ── 3. Precipitación CR2MET (mejor fuente: cache denso → NetCDF) ─────
     precip_data = None
     try:
-        from lectores.lector_cr2met import tiene_precipitacion, climatologia_mensual_punto, PR_NC
-        if tiene_precipitacion():
-            precip_mensual = climatologia_mensual_punto(PR_NC, 'pr', lat, lon,
-                                                         periodo=(1991, 2020))
+        from lectores.lector_cr2met import (
+            tiene_precipitacion, climatologia_mensual_punto, PR_NC,
+            precipitacion_completa_punto
+        )
+        # Intentar cache denso primero, luego NetCDF
+        pr_completa = precipitacion_completa_punto(lat, lon)
+        if pr_completa:
             precip_data = {
-                'fuente': 'CR2MET grillado (0.05°, 1991-2020)',
-                'mensual_mm': [round(v, 1) for v in precip_mensual],
-                'anual_mm': round(sum(precip_mensual), 1),
+                'fuente': pr_completa['fuente'],
+                'mensual_mm': pr_completa['mensual_mm'],
+                'anual_mm': pr_completa['anual_mm'],
                 'meses': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
                           'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             }
+            # Si el cache denso tiene stats y megasequía, agregarlos ya
+            if pr_completa.get('stats_anuales'):
+                stats = pr_completa['stats_anuales']
+                cambio = stats.get('cambio_2006_2020_vs_1991_2005_pct', 0)
+                if cambio != 0:
+                    precip_data['megasequia'] = {
+                        'periodo_1_mm': round(stats.get('media_mm', 0) / (1 + cambio/100), 1) if cambio else 0,
+                        'periodo_2_mm': round(stats.get('media_mm', 0), 1),
+                        'cambio_pct': cambio,
+                        'interpretacion': 'Déficit significativo' if cambio < -15 else
+                                          'Déficit moderado' if cambio < -5 else
+                                          'Estable' if cambio < 5 else 'Aumento',
+                    }
+            if pr_completa.get('extremos_diarios'):
+                precip_data['extremos'] = pr_completa['extremos_diarios']
     except Exception as e:
         informe['errores'].append(f"CR2MET precip: {e}")
 
@@ -134,11 +152,56 @@ def generar_informe_avanzado(lat: float, lon: float, alt: Optional[float] = None
     try:
         from lectores.lector_cr2_estaciones import cargar_estaciones, cargar_series_mensual, precipitacion_para_punto
         est = cargar_estaciones()
-        series = cargar_series_mensual()
+        try:
+            series = cargar_series_mensual()
+        except Exception:
+            series = None
+
         if est and series:
             pe = precipitacion_para_punto(lat, lon, est, series, periodo=(1991, 2020))
             if pe and pe.get('precip_annual', 0) > 0:
                 precip_estaciones = pe
+        elif est:
+            # Fallback: usar climatologías pre-calculadas de estaciones
+            from lectores.lector_cr2met import _cargar_estaciones_climatologia, _haversine_simple
+            est_clim = _cargar_estaciones_climatologia()
+            if est_clim and 'estaciones' in est_clim:
+                cercanas = []
+                for code, ec in est_clim['estaciones'].items():
+                    d = _haversine_simple(lat, lon, ec['lat'], ec['lon'])
+                    if d < 50:
+                        cercanas.append((d, ec))
+                cercanas.sort(key=lambda x: x[0])
+                if cercanas:
+                    cercanas = cercanas[:5]
+                    if len(cercanas) == 1:
+                        ec = cercanas[0][1]
+                        precip_estaciones = {
+                            'precip_monthly': ec['climatologia_mm'],
+                            'precip_annual': ec['anual_mm'],
+                            'fuente': f'CR2_estacion_cache',
+                            'estacion': ec['nombre'],
+                            'dist_km': cercanas[0][0],
+                            'metodo': f'estación más cercana (cache)',
+                        }
+                    else:
+                        monthly = [0.0] * 12
+                        peso_total = 0
+                        est_usadas = []
+                        for d, ec in cercanas:
+                            w = 1.0 / max(d, 0.1) ** 2
+                            peso_total += w
+                            for m in range(12):
+                                monthly[m] += ec['climatologia_mm'][m] * w
+                            est_usadas.append(f"{ec['nombre']} ({d:.0f}km)")
+                        monthly = [round(v / peso_total, 1) for v in monthly]
+                        precip_estaciones = {
+                            'precip_monthly': monthly,
+                            'precip_annual': round(sum(monthly), 1),
+                            'fuente': 'CR2_IDW_cache',
+                            'estaciones_usadas': est_usadas,
+                            'metodo': f'IDW con {len(cercanas)} estaciones (cache)',
+                        }
     except Exception as e:
         informe['errores'].append(f"CR2 estaciones: {e}")
 
@@ -172,25 +235,26 @@ def generar_informe_avanzado(lat: float, lon: float, alt: Optional[float] = None
                 'estaciones_usadas': precip_estaciones.get('estaciones_usadas', []),
             }
 
-        # Tendencia megasequía
-        try:
-            from lectores.lector_cr2met import climatologia_mensual_punto
-            if tiene_precipitacion():
-                p1 = climatologia_mensual_punto(PR_NC, 'pr', lat, lon, periodo=(1991, 2005))
-                p2 = climatologia_mensual_punto(PR_NC, 'pr', lat, lon, periodo=(2006, 2020))
-                s1, s2 = sum(p1), sum(p2)
-                if s1 > 0:
-                    cambio = (s2 - s1) / s1 * 100
-                    precip_data['megasequia'] = {
-                        'periodo_1_mm': round(s1, 1),
-                        'periodo_2_mm': round(s2, 1),
-                        'cambio_pct': round(cambio, 1),
-                        'interpretacion': 'Déficit significativo' if cambio < -15 else
-                                          'Déficit moderado' if cambio < -5 else
-                                          'Estable' if cambio < 5 else 'Aumento',
-                    }
-        except Exception:
-            pass
+        # Tendencia megasequía (si el cache denso no la incluyó)
+        if 'megasequia' not in precip_data:
+            try:
+                from lectores.lector_cr2met import climatologia_mensual_punto
+                if tiene_precipitacion():
+                    p1 = climatologia_mensual_punto(PR_NC, 'pr', lat, lon, periodo=(1991, 2005))
+                    p2 = climatologia_mensual_punto(PR_NC, 'pr', lat, lon, periodo=(2006, 2020))
+                    s1, s2 = sum(p1), sum(p2)
+                    if s1 > 0:
+                        cambio = (s2 - s1) / s1 * 100
+                        precip_data['megasequia'] = {
+                            'periodo_1_mm': round(s1, 1),
+                            'periodo_2_mm': round(s2, 1),
+                            'cambio_pct': round(cambio, 1),
+                            'interpretacion': 'Déficit significativo' if cambio < -15 else
+                                              'Déficit moderado' if cambio < -5 else
+                                              'Estable' if cambio < 5 else 'Aumento',
+                        }
+            except Exception:
+                pass
 
         informe['secciones']['precipitacion'] = precip_data
 
