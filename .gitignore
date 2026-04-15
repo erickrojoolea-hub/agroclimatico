@@ -5,12 +5,18 @@ __pycache__/
 .DS_Store
 .claude/
 
-# Symlinks to local data (too large for cloud)
-BD_agro
-datos_geo
-datos_precipitacion
-
-# Large data files
+# Large data files (not needed for deployment)
 *.gpkg
 *.nc
 *.rar
+*.tif
+*.shp
+*.dbf
+*.shx
+*.prj
+
+# Generated outputs
+Informe_*.pdf
+
+# Temp/lock files
+~$*
