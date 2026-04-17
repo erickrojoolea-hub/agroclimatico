@@ -12,7 +12,10 @@ _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BASE not in sys.path:
     sys.path.insert(0, _BASE)
 
-from auto_data import auto_load_comuna, COORDS_COMUNAS, _SII_COMUNAS
+from auto_data import (
+    auto_load_comuna, COORDS_COMUNAS, _SII_COMUNAS,
+    buscar_predios_cercanos, buscar_predio_por_punto, buscar_por_rol, DESTINO_SII,
+)
 
 st.set_page_config(
     page_title="Informes Premium | Visor Agroclimatico",
@@ -77,6 +80,48 @@ with col_info:
     sii = _SII_COMUNAS.get(key)
     if sii and sii.get("total_predios"):
         st.caption(f"🏞️ **{sii['total_predios']:,} predios rurales** — {sii['pct_agricola']}% agrícolas")
+
+# ── Detección de ROL por punto ─────────────────────────────
+with st.expander("🎯 Detectar predio (ROL) por coordenadas", expanded=False):
+    st.caption("Ingresa coordenadas exactas del predio para identificar el ROL, destino y avalúo. "
+               "Disponible en 32 comunas (principalmente Coquimbo, Atacama, Biobío — 69,464 predios).")
+    c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
+    lat_def, lon_def = -29.90, -71.25  # La Serena por default
+    if coords:
+        lat_def, lon_def = coords[0], coords[1]
+    with c1:
+        lat_input = st.number_input("Latitud", value=float(lat_def), format="%.6f", step=0.0001)
+    with c2:
+        lon_input = st.number_input("Longitud", value=float(lon_def), format="%.6f", step=0.0001)
+    with c3:
+        radio_input = st.number_input("Radio (km)", value=2.0, min_value=0.1, max_value=20.0, step=0.5)
+    with c4:
+        st.write("")
+        st.write("")
+        if st.button("🔍 Buscar", use_container_width=True):
+            st.session_state["busqueda_rol"] = {"lat": lat_input, "lon": lon_input, "radio": radio_input}
+
+    if "busqueda_rol" in st.session_state:
+        b = st.session_state["busqueda_rol"]
+        predios = buscar_predios_cercanos(b["lat"], b["lon"], radio_km=b["radio"], max_results=20)
+        if predios:
+            st.success(f"**{len(predios)} predios encontrados** dentro de {b['radio']} km de ({b['lat']:.4f}, {b['lon']:.4f})")
+            rol_data = []
+            for p in predios:
+                rol_data.append({
+                    "ROL": p["rol"],
+                    "Dist (km)": p["dist_km"],
+                    "Destino": DESTINO_SII.get(p["destino"], p["destino"] or "?"),
+                    "Sup (m²)": f"{p['sup_m2']:,}" if p.get("sup_m2") else "--",
+                    "Avalúo CLP": f"${p['avaluo']:,}" if p.get("avaluo") else "--",
+                    "Dirección": p.get("direccion") or "--",
+                    "Coordenadas": f"{p['lat']:.4f}, {p['lon']:.4f}",
+                })
+            st.dataframe(rol_data, use_container_width=True, hide_index=True)
+        else:
+            st.warning(f"No se encontraron predios dentro de {b['radio']} km. Las coordenadas podrían estar en una comuna sin cobertura SII geolocalizada, o el radio es muy pequeño.")
+
+    st.caption("ℹ️ La cobertura es limitada: 32 comunas de 330 tienen predios georreferenciados. Para el resto, el SII no entrega lat/lon directas.")
 
 st.divider()
 

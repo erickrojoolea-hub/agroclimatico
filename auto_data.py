@@ -684,40 +684,121 @@ def load_sii_stats(comuna):
 
 
 def buscar_predios_cercanos(lat, lon, radio_km=5, max_results=10):
-    """Busca predios rurales en el GPKG SII dentro de un radio del punto dado.
-    Solo funciona si el GPKG está disponible (local development)."""
+    """Busca predios rurales con ROL cercanos a un punto.
+    Usa predios_geo.db (liviano, 10MB, 69k predios) disponible en cloud.
+    Fallback: GPKG completo 1.6GB si está disponible (local)."""
+    import sqlite3
+
+    # Intentar primero el SQLite liviano (deployable)
+    light_db = os.path.join(BASE, "data", "predios_geo.db")
+    if os.path.exists(light_db):
+        try:
+            conn = sqlite3.connect(light_db)
+            c = conn.cursor()
+            # Aprox 1 grado lat ≈ 111 km; ajuste por latitud para lon
+            delta = radio_km / 111.0
+            lat_cos = max(0.3, math.cos(math.radians(lat)))
+            delta_lon = radio_km / (111.0 * lat_cos)
+            c.execute("""
+                SELECT rol, cut, manzana, predio, lat, lon, avaluo, sup_m2, destino, direccion
+                FROM predios
+                WHERE lat BETWEEN ? AND ?
+                  AND lon BETWEEN ? AND ?
+                LIMIT ?
+            """, (lat - delta, lat + delta, lon - delta_lon, lon + delta_lon, max_results * 10))
+            rows = c.fetchall()
+            conn.close()
+            predios = []
+            for r in rows:
+                d_km = _haversine(lat, lon, r[4], r[5])
+                if d_km <= radio_km:
+                    predios.append({
+                        "rol": r[0], "cut": r[1],
+                        "lat": r[4], "lon": r[5],
+                        "avaluo": r[6], "sup_m2": r[7],
+                        "destino": r[8], "direccion": r[9],
+                        "dist_km": round(d_km, 3),
+                    })
+            if predios:
+                return sorted(predios, key=lambda x: x["dist_km"])[:max_results]
+        except Exception:
+            pass
+
+    # Fallback: GPKG completo (solo local)
     gpkg_path = os.path.join(BASE, "Data SII", "predios_rurales_chile_2025S2.gpkg")
     if not os.path.exists(gpkg_path):
-        # Cloud fallback: no predios individuales disponibles
         return []
     try:
-        import sqlite3
         conn = sqlite3.connect(gpkg_path)
         c = conn.cursor()
-        # Aprox 1 grado lat ≈ 111 km
         delta = radio_km / 111.0
+        lat_cos = max(0.3, math.cos(math.radians(lat)))
+        delta_lon = radio_km / (111.0 * lat_cos)
         c.execute("""
             SELECT comuna, manzana, predio, lat, lon, avaluo_total, sup_terreno, destino, direccion_sii
             FROM rurales
             WHERE lat IS NOT NULL AND lat BETWEEN ? AND ?
               AND lon IS NOT NULL AND lon BETWEEN ? AND ?
             LIMIT ?
-        """, (lat - delta, lat + delta, lon - delta / 0.8, lon + delta / 0.8, max_results * 3))
+        """, (lat - delta, lat + delta, lon - delta_lon, lon + delta_lon, max_results * 3))
         rows = c.fetchall()
         conn.close()
-        # Calcular distancia y ordenar
         predios = []
         for r in rows:
             d_km = _haversine(lat, lon, r[3], r[4])
             if d_km <= radio_km:
                 predios.append({
-                    "rol": f"{r[0]}-{r[1]}-{r[2]}", "lat": r[3], "lon": r[4],
+                    "rol": f"{r[0]}-{r[1]}-{r[2]}", "cut": r[0],
+                    "lat": r[3], "lon": r[4],
                     "avaluo": r[5], "sup_m2": r[6], "destino": r[7],
-                    "direccion": r[8], "dist_km": round(d_km, 2),
+                    "direccion": r[8], "dist_km": round(d_km, 3),
                 })
         return sorted(predios, key=lambda x: x["dist_km"])[:max_results]
     except Exception:
         return []
+
+
+def buscar_predio_por_punto(lat, lon, max_dist_km=2.0):
+    """Retorna el predio rural mas cercano a un punto, con su ROL.
+    Returns: dict con rol, destino, avaluo, distancia, o None si no hay predio en max_dist_km."""
+    predios = buscar_predios_cercanos(lat, lon, radio_km=max_dist_km, max_results=1)
+    return predios[0] if predios else None
+
+
+def buscar_por_rol(rol):
+    """Busca un predio por su ROL (formato: cut-manzana-predio)."""
+    import sqlite3
+    light_db = os.path.join(BASE, "data", "predios_geo.db")
+    if not os.path.exists(light_db):
+        return None
+    try:
+        conn = sqlite3.connect(light_db)
+        c = conn.cursor()
+        c.execute("""
+            SELECT rol, cut, manzana, predio, lat, lon, avaluo, sup_m2, destino, direccion
+            FROM predios WHERE rol = ?
+        """, (rol,))
+        r = c.fetchone()
+        conn.close()
+        if not r:
+            return None
+        return {
+            "rol": r[0], "cut": r[1], "manzana": r[2], "predio": r[3],
+            "lat": r[4], "lon": r[5], "avaluo": r[6], "sup_m2": r[7],
+            "destino": r[8], "direccion": r[9],
+        }
+    except Exception:
+        return None
+
+
+# Mapeo codigos destino SII -> nombre legible
+DESTINO_SII = {
+    "A": "Agrícola", "H": "Habitacional", "F": "Forestal",
+    "W": "Sitio eriazo", "V": "Otros/varios", "C": "Comercial",
+    "I": "Industrial", "L": "Hotel/turismo", "E": "Educación/cultura",
+    "Q": "Salud", "G": "Culto", "O": "Oficinas", "D": "Deportivo",
+    "B": "Bodega", "Z": "Estacionamiento",
+}
 
 def auto_load_comuna(comuna, lat=None, lon=None, altitud=None):
     """
