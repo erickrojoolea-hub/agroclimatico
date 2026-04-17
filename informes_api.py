@@ -3,10 +3,17 @@
 Expone render_tab_informes() para usar desde una página Streamlit.
 """
 import base64
+import folium
 import requests
 import streamlit as st
+from streamlit_folium import st_folium
 
 DEFAULT_API = "https://art-bomb-bloomberg-clay.trycloudflare.com"
+
+# Centro visual por defecto (zona central de Chile)
+_DEFAULT_LAT = -35.55
+_DEFAULT_LON = -71.48
+_DEFAULT_ZOOM = 7
 
 
 def _api_url() -> str:
@@ -89,23 +96,72 @@ def render_tab_informes():
         st.stop()
 
     st.markdown(
-        "Ingresá una coordenada dentro de Chile continental y generá un informe "
-        "agroclimático completo (~40-50 pág, 30-90 s de espera)."
+        "Hacé click en el mapa o ingresá coordenadas manualmente. "
+        "Después generá el informe agroclimático completo (~40-50 pág, 30-90 s de espera)."
     )
 
-    # Aplicar override de ejemplos ANTES de crear los widgets
-    lat_default = st.session_state.pop("_example_lat", -35.55)
-    lon_default = st.session_state.pop("_example_lon", -71.48)
+    # --- Gestión de estado del pin (aislado por prefijo _informe_) ---
+    # Aplicar valores pendientes de los botones de ejemplo antes de crear widgets
+    if "_informe_pending_lat" in st.session_state:
+        st.session_state["_informe_lat"] = st.session_state.pop("_informe_pending_lat")
+        st.session_state["_informe_lon"] = st.session_state.pop("_informe_pending_lon")
+
+    # Inicializar pin por defecto
+    if "_informe_lat" not in st.session_state:
+        st.session_state["_informe_lat"] = _DEFAULT_LAT
+    if "_informe_lon" not in st.session_state:
+        st.session_state["_informe_lon"] = _DEFAULT_LON
+
+    pin_lat = st.session_state["_informe_lat"]
+    pin_lon = st.session_state["_informe_lon"]
+
+    # --- Mapa clickeable ---
+    m = folium.Map(
+        location=[pin_lat, pin_lon],
+        zoom_start=_DEFAULT_ZOOM,
+        tiles=None,
+        control_scale=True,
+    )
+    folium.TileLayer(
+        "https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
+        subdomains=["mt0", "mt1", "mt2", "mt3"],
+        name="Satelital", attr="Google", max_zoom=21, overlay=False,
+    ).add_to(m)
+    folium.TileLayer("OpenStreetMap", name="Calles", overlay=False).add_to(m)
+    folium.Marker(
+        [pin_lat, pin_lon],
+        icon=folium.Icon(color="purple", icon="crosshairs", prefix="fa"),
+        tooltip=f"({pin_lat:.4f}, {pin_lon:.4f})",
+    ).add_to(m)
+    folium.LayerControl().add_to(m)
+
+    map_data = st_folium(
+        m, width=None, height=450,
+        returned_objects=["last_clicked"],
+        key="_informe_map",
+    )
+
+    # Procesar click nuevo (solo si cambió lo suficiente para evitar bucles)
+    if map_data and map_data.get("last_clicked"):
+        new_lat = map_data["last_clicked"]["lat"]
+        new_lon = map_data["last_clicked"]["lng"]
+        if abs(new_lat - pin_lat) > 1e-5 or abs(new_lon - pin_lon) > 1e-5:
+            if _chile_continental(new_lat, new_lon):
+                st.session_state["_informe_lat"] = new_lat
+                st.session_state["_informe_lon"] = new_lon
+                st.rerun()
+            else:
+                st.warning("El click cayó fuera de Chile continental; ignorado.")
 
     col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
         lat = st.number_input(
-            "Latitud", value=lat_default, format="%.6f",
+            "Latitud", key="_informe_lat", format="%.6f",
             min_value=-56.0, max_value=-17.0,
         )
     with col2:
         lon = st.number_input(
-            "Longitud", value=lon_default, format="%.6f",
+            "Longitud", key="_informe_lon", format="%.6f",
             min_value=-76.0, max_value=-66.0,
         )
     with col3:
@@ -114,16 +170,16 @@ def render_tab_informes():
     st.caption("Ejemplos rápidos:")
     ec1, ec2, ec3 = st.columns(3)
     if ec1.button("Parral UTM"):
-        st.session_state["_example_lat"] = -36.143091
-        st.session_state["_example_lon"] = -71.644688
+        st.session_state["_informe_pending_lat"] = -36.143091
+        st.session_state["_informe_pending_lon"] = -71.644688
         st.rerun()
     if ec2.button("San Clemente"):
-        st.session_state["_example_lat"] = -35.55
-        st.session_state["_example_lon"] = -71.48
+        st.session_state["_informe_pending_lat"] = -35.55
+        st.session_state["_informe_pending_lon"] = -71.48
         st.rerun()
     if ec3.button("Talca"):
-        st.session_state["_example_lat"] = -35.43
-        st.session_state["_example_lon"] = -71.67
+        st.session_state["_informe_pending_lat"] = -35.43
+        st.session_state["_informe_pending_lon"] = -71.67
         st.rerun()
 
     if st.button("Generar informe", type="primary"):
