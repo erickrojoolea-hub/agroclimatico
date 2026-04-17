@@ -12,3 +12,4 @@ earthengine-api>=0.1.380
 scipy>=1.11.0
 xarray>=2023.0.0
 netCDF4>=1.6.0
+requests>=2.31
