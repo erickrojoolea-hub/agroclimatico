@@ -619,8 +619,27 @@ def load_catastro_nacional_top(exclude_especies=None):
 # 11. FUNCIÓN PRINCIPAL: auto_load_comuna()
 # ═══════════════════════════════════════════════════════════════
 
-# Coordenadas de comunas principales (extraídas de CIREN/CR2MET cache)
-COORDS_COMUNAS = {
+# Coordenadas y stats SII por comuna — cargadas desde data/sii_comunas.json
+# Generado por scripts/build_sii_data.py desde CR2MET + PVsyst + GPKG SII
+_SII_COMUNAS_JSON = os.path.join(BASE, "data", "sii_comunas.json")
+
+def _load_sii_comunas():
+    """Carga el catálogo unificado de comunas (coords + stats SII)."""
+    if not os.path.exists(_SII_COMUNAS_JSON):
+        return {}
+    with open(_SII_COMUNAS_JSON, encoding="utf-8") as f:
+        raw = json.load(f)
+    # Normaliza: key = nombre_normalizado → entry completa
+    out = {}
+    for nombre, entry in raw.items():
+        entry["nombre_oficial"] = nombre
+        out[_normalize(nombre)] = entry
+    return out
+
+_SII_COMUNAS = _load_sii_comunas()
+
+# Hardcoded overrides para comunas calibradas manualmente (ciudad real, no grid CR2MET)
+_COORDS_OVERRIDE = {
     "san clemente": (-35.55, -71.48, 250),
     "talca": (-35.43, -71.67, 102),
     "colbun": (-35.63, -71.47, 320),
@@ -634,6 +653,71 @@ COORDS_COMUNAS = {
     "san javier": (-35.59, -71.73, 90),
     "yerbas buenas": (-35.75, -71.43, 360),
 }
+
+# Dict final: override primero, luego completa con SII/CR2MET/PVsyst
+COORDS_COMUNAS = dict(_COORDS_OVERRIDE)
+for k, v in _SII_COMUNAS.items():
+    if v.get("lat") is not None:
+        COORDS_COMUNAS.setdefault(k, (v["lat"], v["lon"], v.get("alt", 200)))
+
+
+def load_sii_stats(comuna):
+    """Retorna estadísticas SII para una comuna (avaluo, predios rurales, etc)."""
+    entry = _SII_COMUNAS.get(_normalize(comuna))
+    if not entry or not entry.get("total_predios"):
+        return None
+    return {
+        "sii_cut": entry.get("cut"),
+        "sii_region_oficial": entry.get("region"),
+        "sii_total_predios": entry.get("total_predios", 0),
+        "sii_n_agricola": entry.get("n_agricola", 0),
+        "sii_n_forestal": entry.get("n_forestal", 0),
+        "sii_n_habitacional": entry.get("n_habitacional", 0),
+        "sii_n_eriazo": entry.get("n_eriazo", 0),
+        "sii_pct_agricola": entry.get("pct_agricola", 0),
+        "sii_avaluo_prom_agricola_clp": entry.get("avaluo_prom_agricola_clp", 0),
+        "sii_sup_prom_agricola_m2": entry.get("sup_prom_agricola_m2", 0),
+        "sii_sup_prom_agricola_ha": round(entry.get("sup_prom_agricola_m2", 0) / 10000, 2),
+        "sii_sup_total_agricola_ha": entry.get("sup_total_agricola_ha", 0),
+        "sii_valor_total_agricola_mmusd": entry.get("valor_total_agricola_mmusd", 0),
+    }
+
+
+def buscar_predios_cercanos(lat, lon, radio_km=5, max_results=10):
+    """Busca predios rurales en el GPKG SII dentro de un radio del punto dado.
+    Solo funciona si el GPKG está disponible (local development)."""
+    gpkg_path = os.path.join(BASE, "Data SII", "predios_rurales_chile_2025S2.gpkg")
+    if not os.path.exists(gpkg_path):
+        # Cloud fallback: no predios individuales disponibles
+        return []
+    try:
+        import sqlite3
+        conn = sqlite3.connect(gpkg_path)
+        c = conn.cursor()
+        # Aprox 1 grado lat ≈ 111 km
+        delta = radio_km / 111.0
+        c.execute("""
+            SELECT comuna, manzana, predio, lat, lon, avaluo_total, sup_terreno, destino, direccion_sii
+            FROM rurales
+            WHERE lat IS NOT NULL AND lat BETWEEN ? AND ?
+              AND lon IS NOT NULL AND lon BETWEEN ? AND ?
+            LIMIT ?
+        """, (lat - delta, lat + delta, lon - delta / 0.8, lon + delta / 0.8, max_results * 3))
+        rows = c.fetchall()
+        conn.close()
+        # Calcular distancia y ordenar
+        predios = []
+        for r in rows:
+            d_km = _haversine(lat, lon, r[3], r[4])
+            if d_km <= radio_km:
+                predios.append({
+                    "rol": f"{r[0]}-{r[1]}-{r[2]}", "lat": r[3], "lon": r[4],
+                    "avaluo": r[5], "sup_m2": r[6], "destino": r[7],
+                    "direccion": r[8], "dist_km": round(d_km, 2),
+                })
+        return sorted(predios, key=lambda x: x["dist_km"])[:max_results]
+    except Exception:
+        return []
 
 def auto_load_comuna(comuna, lat=None, lon=None, altitud=None):
     """
@@ -737,7 +821,25 @@ def auto_load_comuna(comuna, lat=None, lon=None, altitud=None):
     else:
         result.update({"nacional_top": [], "nacional_sup_total": 0})
 
-    # 10. Derived/estimated fields (from CR2MET + DGA station)
+    # 10. SII — estadísticas prediales por comuna (avalúo, N° predios, % agrícola)
+    sii = load_sii_stats(comuna)
+    if sii:
+        result.update(sii)
+        # NO sobrescribir region — _add_derived_fields lo resuelve con formato Chile ("del Maule")
+        print(f"  [OK] SII: {sii['sii_total_predios']} predios, {sii['sii_pct_agricola']}% agrícola, "
+              f"avalúo prom ${sii['sii_avaluo_prom_agricola_clp']:,.0f}")
+    else:
+        result.update({"sii_total_predios": 0, "sii_n_agricola": 0, "sii_pct_agricola": 0,
+                       "sii_avaluo_prom_agricola_clp": 0, "sii_sup_prom_agricola_ha": 0})
+
+    # 11. SII predios cercanos (point-level) — solo si tenemos lat/lon
+    if lat and lon:
+        predios_cerca = buscar_predios_cercanos(lat, lon, radio_km=5, max_results=5)
+        if predios_cerca:
+            result["sii_predios_cercanos"] = predios_cerca
+            print(f"  [OK] Predios cercanos SII: {len(predios_cerca)} dentro de 5km")
+
+    # 12. Derived/estimated fields (from CR2MET + DGA station)
     _add_derived_fields(result)
 
     return result
@@ -747,17 +849,48 @@ def _add_derived_fields(d):
     """Calcula campos derivados que necesita el engine."""
     cr2 = d.get("cr2met", {})
 
-    # Region/Provincia (from commune mapping — simplified)
+    # Region/Provincia — preserve hardcoded Maule formatting, map SII for rest
     region_map = {
         "san clemente": ("del Maule", "Talca"),
         "talca": ("del Maule", "Talca"),
         "molina": ("del Maule", "Curicó"),
         "curico": ("del Maule", "Curicó"),
     }
+
+    # Mapping SII region -> format "de/del X" (convención chilena oficial)
+    SII_REGION_FORMAT = {
+        "Arica y Parinacota": "de Arica y Parinacota",
+        "Tarapacá": "de Tarapacá",
+        "Antofagasta": "de Antofagasta",
+        "Atacama": "de Atacama",
+        "Coquimbo": "de Coquimbo",
+        "Valparaíso": "de Valparaíso",
+        "Metropolitana": "Metropolitana",
+        "O'Higgins": "del Libertador Gral. Bernardo O'Higgins",
+        "Maule": "del Maule",
+        "Ñuble": "de Ñuble",
+        "Biobío": "del Biobío",
+        "La Araucanía": "de La Araucanía",
+        "Los Ríos": "de Los Ríos",
+        "Los Lagos": "de Los Lagos",
+        "Aysén": "de Aysén del Gral. Carlos Ibáñez del Campo",
+        "Magallanes": "de Magallanes y la Antártica Chilena",
+    }
+
     norm = _normalize(d.get("comuna",""))
-    reg_info = region_map.get(norm, ("del Maule", "Talca"))
-    d.setdefault("region", reg_info[0])
-    d.setdefault("provincia", reg_info[1])
+    if norm in region_map:
+        reg_info = region_map[norm]
+        d.setdefault("region", reg_info[0])
+        d.setdefault("provincia", reg_info[1])
+    elif d.get("sii_region_oficial"):
+        # Usar región oficial del SII, formateada
+        region_fmt = SII_REGION_FORMAT.get(d["sii_region_oficial"], d["sii_region_oficial"])
+        d.setdefault("region", region_fmt)
+        d.setdefault("provincia", "")  # Falta mapeo de provincias a futuro
+    else:
+        # Fallback genérico
+        d.setdefault("region", "del Maule")
+        d.setdefault("provincia", "Talca")
 
     # Distance to coast — lookup table for known communes, else estimate from lat/lon
     DIST_COSTA = {

@@ -12,7 +12,7 @@ _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BASE not in sys.path:
     sys.path.insert(0, _BASE)
 
-from auto_data import auto_load_comuna, COORDS_COMUNAS
+from auto_data import auto_load_comuna, COORDS_COMUNAS, _SII_COMUNAS
 
 st.set_page_config(
     page_title="Informes Premium | Visor Agroclimatico",
@@ -21,32 +21,62 @@ st.set_page_config(
 )
 
 # ── Header ──────────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <h1 style='color:#2E7D32;'>Informes Agroclimaticos Premium</h1>
 <p style='font-size:1.1em;color:#555;'>
-Genera 3 informes profesionales (Basico, Avanzado, Predial) para cualquier comuna del Maule.
-Motor v4 con scoring SAC/SRC/STI/IAP y datos CIREN, DGA, SEC, CR2MET, ODEPA.
+Genera 3 informes profesionales (Basico, Avanzado, Predial) para <b>{len(COORDS_COMUNAS)} comunas de Chile</b>.
+Motor v4 con scoring SAC/SRC/STI/IAP y datos CIREN, DGA, SEC, CR2MET, ODEPA, SII.
 </p>
 """, unsafe_allow_html=True)
 
 st.divider()
 
-# ── Selector de comuna ──────────────────────────────────────
-COMUNAS_DISPONIBLES = {
-    k.title(): v for k, v in COORDS_COMUNAS.items()
-}
+# ── Selector de comuna (con filtro por región) ──────────────
+# Agrupar por region usando _SII_COMUNAS
+regiones_map = {}
+for k, v in _SII_COMUNAS.items():
+    region = v.get("region") or "Otra"
+    regiones_map.setdefault(region, []).append(v.get("nombre_oficial", k.title()))
 
-col1, col2 = st.columns([2, 1])
-with col1:
-    comuna = st.selectbox(
-        "Selecciona una comuna",
-        options=sorted(COMUNAS_DISPONIBLES.keys()),
-        index=sorted(COMUNAS_DISPONIBLES.keys()).index("San Clemente") if "San Clemente" in COMUNAS_DISPONIBLES else 0,
+# Comunas sin region (solo en override Maule)
+for k in COORDS_COMUNAS:
+    if k not in _SII_COMUNAS:
+        regiones_map.setdefault("Maule", []).append(k.title())
+
+col_r, col_c, col_info = st.columns([1, 2, 1])
+
+with col_r:
+    regiones_ordenadas = sorted(regiones_map.keys())
+    region_sel = st.selectbox(
+        "Región",
+        options=["Todas"] + regiones_ordenadas,
+        index=regiones_ordenadas.index("Maule") + 1 if "Maule" in regiones_ordenadas else 0,
     )
-with col2:
-    coords = COMUNAS_DISPONIBLES[comuna]
-    st.metric("Coordenadas", f"{coords[0]:.2f}S, {abs(coords[1]):.2f}O")
-    st.metric("Altitud", f"{coords[2]} m s.n.m.")
+
+with col_c:
+    if region_sel == "Todas":
+        opciones = sorted({c for lista in regiones_map.values() for c in lista})
+    else:
+        opciones = sorted(set(regiones_map.get(region_sel, [])))
+    default_idx = opciones.index("San Clemente") if "San Clemente" in opciones else 0
+    comuna = st.selectbox(
+        f"Comuna ({len(opciones)} disponibles)",
+        options=opciones,
+        index=default_idx,
+    )
+
+with col_info:
+    # Resolve coords via COORDS_COMUNAS (lowercase key)
+    from auto_data import _normalize
+    key = _normalize(comuna)
+    coords = COORDS_COMUNAS.get(key)
+    if coords:
+        st.metric("Coord", f"{coords[0]:.2f}S, {abs(coords[1]):.2f}O")
+        st.metric("Alt", f"{coords[2]} m")
+    # Show quick SII preview
+    sii = _SII_COMUNAS.get(key)
+    if sii and sii.get("total_predios"):
+        st.caption(f"🏞️ **{sii['total_predios']:,} predios rurales** — {sii['pct_agricola']}% agrícolas")
 
 st.divider()
 
@@ -150,6 +180,35 @@ if "v4_pdfs" in st.session_state:
         st.metric("QA Checks", f"{passed}/{total_qa}")
 
     st.divider()
+
+    # ── Datos SII ──────────────────────────────────────
+    d = st.session_state.get("v4_data", {})
+    if d.get("sii_total_predios"):
+        st.markdown("#### Contexto Predial SII (2025 S2)")
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Predios rurales", f"{d['sii_total_predios']:,}")
+        c2.metric("% Agrícola", f"{d['sii_pct_agricola']}%")
+        c3.metric("Avalúo prom. agr.", f"${d['sii_avaluo_prom_agricola_clp']/1_000_000:.1f}M")
+        c4.metric("Sup. prom. agr.", f"{d.get('sii_sup_prom_agricola_ha', 0):.1f} ha")
+        c5.metric("Valor total agr.", f"{d.get('sii_valor_total_agricola_mmusd', 0):,.0f} MM USD")
+
+        # Predios cercanos (si los hay)
+        predios_cerca = d.get("sii_predios_cercanos", [])
+        if predios_cerca:
+            with st.expander(f"Predios rurales cercanos al punto ({len(predios_cerca)})"):
+                cerca_data = []
+                for p in predios_cerca:
+                    cerca_data.append({
+                        "ROL": p["rol"],
+                        "Dist (km)": p["dist_km"],
+                        "Destino": p["destino"],
+                        "Sup (m²)": f"{p['sup_m2']:,.0f}" if p.get("sup_m2") else "--",
+                        "Avalúo CLP": f"${p['avaluo']:,.0f}" if p.get("avaluo") else "--",
+                        "Dirección": p.get("direccion") or "--",
+                    })
+                st.dataframe(cerca_data, use_container_width=True, hide_index=True)
+
+        st.divider()
 
     # ── SAC Ranking Table ──────────────────────────────
     st.markdown("#### Ranking SAC por Especie")
